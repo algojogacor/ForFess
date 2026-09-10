@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bookmark } from "lucide-react";
 import { KoleksiGrid } from "./KoleksiGrid";
+import { ScrollProgress } from "@/components/menfess/ScrollProgress";
 import { ScrollTopButton } from "@/components/menfess/ScrollTopButton";
 
 /**
@@ -41,6 +42,7 @@ export default function TersimpanPage() {
 
         <KoleksiGrid />
       </div>
+      <ScrollProgress />
       <ScrollTopButton />
     </div>
   );

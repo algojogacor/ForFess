@@ -258,3 +258,120 @@
    258→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dengan token fresh; MENFESS_DRY_RUN masih true (disengaja untuk QA). Reveal bergantung JS — tanpa JS konten langsung tampil normal (by design).
    259→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; simpan riwayat kiriman ke database (Prisma) untuk statistik agregat; share card sebagai gambar (canvas → PNG); multi-brand constants; regenerasi token IG + DRY_RUN=false saat produksi.
    260→
+   261→---
+   262→
+   263→Task ID: 13
+   264→Agent: main (Z.ai Code)
+   265→Task: QA round + fitur baru — reaksi pembaca (Prisma/SQLite), unduh gambar kartu, tips panel, polish
+   266→
+   267→Work Log:
+   268→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, 14 route 200, console bersih, dev.log hanya known issue content_publishing_limit yang fail-open). QA agent-browser awal: landing/kirim/arsip/detail aman → lanjut fitur baru.
+   269→- REAKSI PEMBACA (fitur utama ronde ini — interaksi nyata pembaca situs, data disimpan sendiri):
+   270→  - prisma/schema.prisma: model FessReaction (mediaId + kind + createdAt, index [mediaId, kind] & [createdAt]) — menggantikan scaffold User/Post yang tak terpakai. Prinsip privasi: TIDAK ada identitas yang disimpan; IP hanya untuk rate-limit in-memory, tak pernah masuk DB. db:push sukses.
+   271→  - lib/reaksi.ts: getReactionCounts (GROUP BY bulk), getReactionCountsForOne, saveReaction dgn $transaction (delete baris lama via replaceRowId yang dicocokkan JUGA mediaId — mustahil hapus reaksi kartu lain). Semua fail-soft: DB gagal → {} / null, UI tetap jalan.
+   272→  - API /api/reaksi: GET bulk (maks 50 id, validasi regex ID media IG angka 5–25 digit, cache public s-maxage=15 + stale-while-revalidate=60); POST { mediaId, kind, replaceRowId? } → simpan + balikin counts & rowId tiket. Error semuanya SPESIFIK: 400 body bukan JSON / ID invalid / kind tak dikenal, 429 rate-limit dgn "Coba lagi dalam N detik" + header Retry-After, 503 DB tak terjangkau. Rate limiter refactor jadi factory createLimiter — submit & reaksi punya peta/window terpisah (reaksi: cooldown 2 dtk, maks 30/10 mnt).
+   273→  - Komponen ReactionBar (client) di /fess/[id]: 4 reaksi (🫶 Relate, 😂 Lucu, 🥲 Ikut sedih, 🔥 Semangat) — pill zine hard-border, selected = bg signal + ink-fixed, hover -translate-y-0.5 + shadow, angka count animasi pop (key=n), optimistic update + snapshot rollback, localStorage simpan {kind, rowId} per kartu (kunci fess:reaksi:<id>) sehingga pilihan tetap ter-highlight setelah reload. Ganti reaksi = POST dgn replaceRowId → hitungan tetap jujur (bisa diganti, nggak bisa dicabut — dijelaskan di hint). Semua path gagal (429/503/network/HTTP lain) punya toast spesifik; hitungan tak termuat tetap bisa bereaksi (angka menyusul, dijelaskan).
+   274→  - Terverifikasi end-to-end via browser: klik relate → total 2 + relate 1; ganti ke semangat → relate kembali 0 (baris kehapus di DB), semangat 1, total tetap 2; reload → state selected persist; server counts = {lucu:1, semangat:1(+sedih dari uji rate-limit)}.
+   275→  - Uji rate limit via curl: 35 POST beruntun → 200 lalu 429 stabil dgn pesan spesifik.
+   276→- ARSIP + REAKSI: ArchiveGrid tarik hitungan reaksi bulk (satu fetch /api/reaksi utk semua id yang dimuat, gagal = diam tanpa chip — reaksi itu bonus); chip reaksi di meta kartu (emoji dominan + total, tooltip "n reaksi pembaca di situs ini (terbanyak: X)"), style pill signal-soft halus; SORT KETIGA "Paling direaksi" — hanya muncul kalau minimal 1 kartu punya reaksi (pola jujur yang sama dgn "Paling disukai"), tie-break terbaru. Terverifikasi: toggle aktif kuning, chip 😂 2 tampil.
+   277→- UNDUH GAMBAR (MenfessActions): tombol keempat "Unduh gambar" — fetch /fess/[id]/opengraph-image (mesin generator yang sama dgn kartu IG) → blob → a[download]; state "Menyiapkan…" + spinner, disabled cursor-wait, toast sukses "Gambar kartu terunduh", error 404 vs lain dibedakan spesifik. Terverifikasi: fetch OG = 200 image/png 54KB, klik → toast sukses.
+   278→- /KIRIM TIPS PANEL: kolom pratinjau yang tadi kosong di bawah placeholder kini diisi panel "Biar kartunya enak dibaca" — 3 tips bernomor (tulis kayak ngobrol / satu cerita per menfess / jangan sebut nama orang), dashed border + bg signal-soft, sticky-safe di desktop, stack di mobile.
+   279→- PRIVASI: halaman /privacy ditambah penjelasan reaksi pembaca (data yang disimpan: ID kartu + jenis + waktu; pilihan sendiri diingat di localStorage perangkat) + update section retensi.
+   280→- QA agent-browser lengkap: /fess/[id] light+dark desktop & 390px (bar reaksi, selected state, pill, kontras OK), arsip mobile (3 toggle urutan muat satu baris, chip reaksi), kirim (tips panel), unduh gambar OK, landing LiveStats tetap jalan, footer sticky OK, console fresh-session bersih, semua route 200 + 404 benar, cache header /api/reaksi benar, lint akhir 0 error 0 warning. dev.log bersih (hanya known issue kuota IG + log 404 yang memang by-design).
+   281→- [Catatan proses] Ada output tool yang menampilkan "grid-cols-inmax(...)" — ternyata artefak render terminal yang menelan "[m"; hexdump membuktikan source benar (grid-cols-[minmax(0,1fr)_1.6fr]). Layout dua kolom terverifikasi visual.
+   282→
+   283→Stage Summary:
+   284→- VERIFIED: reaksi pembaca end-to-end (Prisma/SQLite nyata, optimistic UI, switch reaksi jujur, rate-limit spesifik), unduh gambar kartu, sort "Paling direaksi", chip reaksi arsip, tips panel, privasi terbarui — semua lolos QA light/dark desktop & mobile.
+   285→- Keputusan penting: reaksi = satu per perangkat per kartu, bisa diganti via tiket rowId (cuid, disimpan localStorage), nggak bisa dicabut — demi hitungan yang jujur; DB gagal tidak pernah merusak halaman (fail-soft semua jalur).
+   286→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA). Prisma log:['query'] masih aktif di dev — wajar, tapi di produksi sebaiknya dilepas.
+   287→- Ide ronde berikutnya: tampilkan reaksi di /acak (mini bar atau chip), statistik total reaksi di LiveStats landing, admin/maintenance endpoint pembersihan reaksi post tua, pagination server-side arsip (after-cursor) bila post >24, regenerasi token IG + DRY_RUN=false saat produksi.
+   288→
+   289→---
+   290→
+   291→Task ID: 14
+   292→Agent: main (Z.ai Code)
+   293→Task: QA round + fitur baru — kategori menfess end-to-end, reaksi di /acak, statistik reaksi pembaca di landing
+   294→
+   295→Work Log:
+   296→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, dev.log hanya known issue content_publishing_limit yang fail-open). QA agent-browser awal: landing/arsip/acak/detail aman light+dark → lanjut fitur baru, bukan bugfix.
+   297→- KATEGORI MENFESS (fitur utama ronde ini — label opsional yang menyeberangi seluruh pipeline):
+   298→  - constants: MENFESS_CATEGORIES (bebas✳/curhat🌧/pengakuan🤫/lucu😂/semangat🔥/tanya🤔) + DEFAULT_CATEGORY="bebas" + findCategory(). "bebas" TIDAK menulis apa pun ke caption → post lama otomatis dianggap bebas, nol migrasi.
+   299→  - caption.ts: baris marker `kategori: <id>` di boilerplate caption; extractCategoryFromCaption() + extractMenfessText kini menghapus baris kategori dari isi. Regex global dipakai bersama → lastIndex di-reset sebelum & sesudah exec (anti state leak antar panggilan).
+   300→  - post-template.ts: categoryStamp() — stempel mono tomato (#E4572E baru di TEMPLATE_PALETTE), border 3px, rotate -2°, di samping aksen kuning (satu baris flex). buildTemplateNode(text, fonts, categoryId?) — preview client & render server identik.
+   301→  - generate-image.ts: renderMenfessCard(text, category?). Diverifikasi visual via render PNG: kartu pendek "PENGAKUAN" & kartu 522 char "CURHAT" — stamp rapi, layout tak bergeser.
+   302→  - API /api/submit: validasi category (tidak dikenal → diam-diam default, bukan menolak), diteruskan ke render + caption builder (categoryLine hanya jika bukan bebas). Log submit kini mencantumkan category.
+   303→  - Form: komponen baru CategoryPicker (fieldset + radio asli sr-only + label chip — keyboard & SR jalan tanpa trik; chip terpilih kuning + hard shadow; hint dinamis per kategori). Draf di-upgrade ke v2 (JSON {content, category}) dengan fallback baca v1 teks polos; submit sukses menghapus kedua key.
+   304→  - SubmissionHistory: chip kategori tomat per baris + mini preview ikut merender stamp (PostPreview category prop).
+   305→  - Arsip: filter chip kategori (SEMUA + kategori yang BENAR-BENAR ada di post dimuat, dengan count — tidak ada chip mati), aktif = tomato; digabung dgn pencarian dalam satu useMemo; empty state kini menangani filter-tanpa-hasil + tombol "Bersihkan filter kategori"; badge kategori kecil di meta tiap kartu.
+   306→  - /fess/[id]: stamp kategori miring di panel metadata + PostPreview pakai category (kartu di halaman = kartu di IG). opengraph-image per kartu: stamp kategori di header (fallback OG brand tetap aman).
+   307→  - Landing: kartu contoh kini pakai stamp ("SEMANGAT" & "CURHAT" — SAMPLE_B text diperbarui biar cocok), ticker + item "KATEGORI OPSIONAL", FAQ baru "Kategori menfess itu apa? Wajib?" (JSON-LD ikut ke-pick otomatis).
+   308→  - Privasi: section data menjelaskan kategori ikut publik di kartu & caption.
+   309→- REAKSI DI /ACAK: ReactionBar dapat prop variant "full"|"compact" — compact = pill emoji+count saja (tanpa label), hint satu baris, dipasang di bawah baris meta kartu acak dengan key=item.id (state reset per kartu). Kunci localStorage sama dgn /fess/[id] → pilihan tersinkar antar halaman. Terverifikasi: klik relate di /acak → total nambah, aria-pressed true, tiket rowId tersimpan, /fess/[id] ikut menunjukkan terpilih.
+   310→- STATISTIK REAKSI PEMBACA (landing): reaksi.ts getTotalReactionCount() (COUNT semua, fail-soft null); /api/stats menambah field readerReactions (dicache 5 menit sama dgn posts/likes — kegagalan DB independen dari IG); LiveStats dirender ulang: strip tampil jika minimal satu angka ada (posts ATAU reactions), segmen "☺ n reaksi pembaca" dgn title tooltip. Terverifikasi nyata: "SUDAH 1 MENFESS TAYANG | ♥0 SUKA | 3 REAKSI PEMBACA".
+   311→- QA agent-browser menyeluruh: /kirim picker default Bebas → pilih Curhat → preview stamp CURHAT muncul live → draf v2 {content,category} tersimpan → submit dry-run sukses → panel "Kiriman kamu" menampilkan chip 🌧Curhat + mini kartu dgn stamp. /arsip: filter chip diuji dgn fetch stub (caption diberi marker kategori: lucu) → chip "😂Lucu 1" aktif tomato, kartu terfilter 1, kombinasi cari+filter → empty state + tombol bersihkan (fetch asli dipulihkan setelahnya — data asli belum punya kategori → chip disembunyikan, perilaku jujur benar). /acak light+dark desktop & 390px: 4 pill muat satu baris, reaksi tersimpan. Landing dark: strip stats & stamp terbaca. Mobile 390px /kirim: chip wrap 2 baris rapi. Console bersih, semua route 200 + OG routes 200. Invalid category "hackerman" via curl → ok (fallback default). Lint akhir 0 error 0 warning.
+   312→- [Catatan proses] Satu eval gagal karena Identifier redeclared (variabel sebelumnya masih hidup di context eval) — bukan bug app; dibungkus IIFE. a11y-tree snapshot kadang menyatukan teks span bersebelahan (heading hero) — hexdump source membuktikan spasi benar.
+   313→
+   314→Stage Summary:
+   315→- VERIFIED end-to-end: kategori menfess (form → preview → API → caption marker → kartu IG → arsip filter → halaman kartu → OG image), reaksi compact di /acak (state tersinkar dgn /fess/[id]), statistik reaksi pembaca di landing — semua lolos QA light/dark desktop & mobile.
+   316→- Keputusan penting: "bebas" tidak menulis marker (post lama = bebas tanpa migrasi); kategori tak dikenal → default diam-diam (tidak menolak kiriman); chip filter hanya untuk kategori yang ada isinya; strip landing tampil kalau minimal satu angka tersedia.
+   317→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA) — filter arsip baru akan kelihatan datanya setelah ada post asli berkategori.
+   318→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; kategori di RSS/JSON-LD per item; share gambar kartu langsung dari arsip (canvas→PNG); admin cleanup endpoint reaksi post tua; regenerasi token IG + DRY_RUN=false saat produksi.
+   319→
+   320→---
+   321→
+   322→Task ID: 15
+   323→Agent: main (Z.ai Code)
+   324→Task: QA round + fitur baru — Koleksi "Tersimpan" (bookmark perangkat), kartu bersama, polish RSS/styling
+   325→
+   326→Work Log:
+   327→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, 14 route 200, console fresh-session bersih, dev.log hanya known issue content_publishing_limit fail-open + DRY_RUN). Keputusan: lanjut FITUR BARU dari backlog, bukan bugfix.
+   328→- KOLEKSI TERSIMPAN (fitur utama ronde ini — bookmark menfess favorit, 100% localStorage, tanpa server/akun):
+   329→  - lib/koleksi.ts: simpan SNAPSHOT data publik kartu (bukan cuma ID — URL CDN IG cepat expired & arsip cuma ~50 post, kartu lama harus tetap bisa dibuka). Maks 100 kartu FIFO. API: listKoleksi/koleksiIds/isSaved/saveFess/unsaveFess/toggleFess/clearKoleksi + hook useKoleksi (useSyncExternalStore — sinkron antar komponen & antar-tab via event custom + event storage; cache referensi stabil, invalidasi manual di handler storage). Semua fail-soft.
+   330→  - [BUG ditemukan & diperbaiki saat QA] lupa import useSyncExternalStore → Runtime ReferenceError merash halaman arsip (dev server sempat mati, restart via scripts/dev-server.sh). Fix: import React + rapikan deklarasi konstanta di atas hook.
+   331→  - SaveButton (variant "overlay" ikon pojok kartu / "row" tombol berlabel): satu sumber state via useKoleksi → semua tombol di semua halaman selalu sinkar. aria-pressed, toast spesifik simpan/hapus. Detail UX: overlay tersembunyi sampai hover DI PERANGKAT HOVER SAJA — custom variant `no-hover` (@custom-variant @media not (hover: hover) di globals.css) bikin tombol selalu tampak di layar sentuh (variant arbitrary [@media(hover:hover)]: terbukti tidak digenerate Tailwind 4 — dicek via document.styleSheets, solusi @custom-variant terverifikasi bekerja via matchMedia).
+   332→  - MenfessCard: kartu arsip diekstrak jadi komponen bersama (arsip + koleksi). Perbaikan internal: CardImage dgn fallback jujur — kalau <img> CDN IG gagal (onError) → render ulang kartu via PostPreview dari caption (mesin yang sama dgn kartu aslinya), state failedKey derived dari id+URL (tanpa setState-in-effect, lint rule react-hooks/set-state-in-effect lolos bersih).
+   333→  - /tersimpan (BARU): halaman koleksi — header zine, skeleton saat hydration (mencegah flash empty-state), search dalam snapshot, "Hapus semua" konfirmasi dua langkah (auto-revert 3 detik), chip reaksi live via bulk /api/reaksi, empty state ilustratif bintang + CTA arsip/acak. robots noindex (data personal per perangkat) & sengaja TIDAK masuk sitemap (terverifikasi).
+   334→  - Entry point: Navbar link TERSIMPAN + badge count live (desktop & mobile menu), toolbar arsip tombol Tersimpan + badge.
+   335→  - Wire: arsip (overlay), /acak (row di baris meta), /fess/[id] (row di baris aksi — snapshot dikirim dari server component, serializable).
+   336→- STYLING DETAIL (wajib ronde ini): ScrollTopButton melayang zine (hard shadow, muncul setelah 480px scroll, di atas footer) di /arsip & /tersimpan; badge count kuning di navbar/toolbar; empty-state koleksi berilustrasi; toolbar arsip kini 3 tombol (Tersimpan/Acak/Muat ulang) yang wrap rapi di 390px.
+   337→- RSS (feed.xml): item berkategori kini berjudul prefix "[Label]" + elemen <category>; post tanpa kategori tetap polos (terverifikasi XML valid).
+   338→- PRIVASI + LANDING: privacy section "Koleksi tersimpan" (data publik kartu, di perangkat, bisa dihapus); FAQ baru "Bisa nyimpen menfess favorit?" (JSON-LD ikut otomatis).
+   339→- QA agent-browser menyeluruh (fresh session): simpan dari arsip → badge navbar+toolbar instan + toast; unsave dari /tersimpan → kartu hilang, badge turun, /arsip sinkar; simpan dari /fess/[id] → reload → state persist (localStorage snapshot terverifikasi); /acak row tersinkar; fallback render dgn snapshot mediaUrl rusak → PostPreview + stamp kategori "CURHAT" tampil; search koleksi (cocok 1, kosong → tombol bersihkan); hapus semua dua langkah → localStorage null + empty state; mobile 390px (overlay tombol tampak tanpa hover, toolbar wrap 2 baris rapi); dark mode /tersimpan OK; 13 route dicek: semua 200 + 404 benar; console fresh-session 0 error di semua halaman (error "Ecmascript file had an error" sebelumnya = buffer console sesi lama sebelum fix import — hilang setelah browser direstart); dev.log hanya log normal; lint akhir 0 error 0 warning.
+   340→
+   341→Stage Summary:
+   342→- VERIFIED end-to-end: koleksi tersimpan (simpan/hapus/persist/sinkar antar halaman & tab, fallback kartu expired, search, clear-all, mobile + dark), ScrollTopButton, RSS kategori.
+   343→- Keputusan penting: koleksi = snapshot localStorage (tahan URL IG expired & horizon arsip 50 post), noindex + tanpa sitemap; tombol overlay selalu tampak di perangkat sentuh via @custom-variant no-hover.
+   344→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — fail-open by design, verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA); Prisma log:['query'] masih aktif di dev; bunx tsc --noEmit mencakup folder examples/skills milik scaffold (error pre-existing, bukan kode app).
+   345→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; badge "Tersimpan" count di halaman arsip kartu (chip kecil di meta); share koleksi sebagai daftar teks; admin cleanup endpoint reaksi post tua (butuh desain secret header); regenerasi token IG + DRY_RUN=false saat produksi.
+   346→
+   347→---
+   348→
+   349→Task ID: 16
+   350→Agent: main (Z.ai Code)
+   351→Task: QA round + fitur baru — ekspor koleksi jadi teks, rekomendasi "Kartu lainnya" di /fess/[id], endpoint admin pembersihan reaksi, zine-tilt grid
+   352→
+   353→Work Log:
+   354→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, 14 route 200, console fresh-session bersih di semua halaman, dev.log hanya known issue content_publishing_limit fail-open). Keputusan: lanjut FITUR BARU dari backlog, bukan bugfix.
+   355→- EKSPOR KOLEKSI (fitur utama — backlog "share koleksi sebagai daftar teks"):
+   356→  - lib/koleksi.ts: buildKoleksiText(list, siteHost) — nomor urut + kutipan (excerptFromCaption: marker kategori & boilerplate ikut dibuang) + tautan lokal /fess/<id> per kartu, footer privasi; koleksi kosong → string kosong. Diverifikasi via skrip bun: caption penuh boilerplate diekstrak jadi kutipan bersih.
+   357→  - Komponen KoleksiExport di toolbar /tersimpan: HP → share sheet (Web Share API) dengan title "Koleksi Fess UNAIR (n kartu)"; desktop → clipboard. AbortError (user batal) dibiarkan diam; share gagal → fallback clipboard + toast info berbeda; clipboard gagal → toast error spesifik. State tombol: Ekspor daftar → Menyiapkan… → Siap dibagikan (2 dtk).
+   358→  - [BUG ditemukan & diperbaiki saat QA] ikon "ListDown" tidak ada di lucide-react → error kompilasi 500 (tertangkap curl pertama). Diganti ListOrdered; verifikasi ulang lolos.
+   359→  - Terverifikasi di browser headless: klik → path clipboard (navigator.share tidak ada) → toast error SPESIFIK "Browser memblokir akses clipboard atau share…" karena headless memblokir clipboard — perilaku feedback lengkap terbukti; format teks diverifikasi via fungsi murni.
+   360→- KARTU LAINNYA (rekomendasi di /fess/[id]):
+   361→  - Komponen client FessRecommendations: fetch /api/arsip sekali, buang kartu aktif, Fisher–Yates (acak jujur, bukan sort(Math.random()) yang bias) ambil 3 kartu → grid MenfessCard. Fail-soft total: fetch gagal → section menghilang; arsip kosong → tdk dirender; loading → 3 SkeletonCard di tempatnya (tidak ada layout lompat).
+   362→  - Dipasang di halaman /fess/[id] antara artikel dan CTA: kicker stempel dadu miring "KARTU LAINNYA", heading "Mumpung lagi di sini…", link "Lihat semua arsip →", separator dashed. Terverifikasi: 2 kartu kandidat muncul (arsip 3 post − kartu aktif), screenshot desktop rapi.
+   363→- ENDPOINT ADMIN PEMBERSIHAN REAKSI (backlog "admin cleanup endpoint"):
+   364→  - POST /api/admin/reaksi-cleanup — header x-admin-secret dibandingkan env MENFESS_ADMIN_SECRET (crypto.timingSafeEqual, fail-CLOSED: env tak terpasang → 401, bukan fail-open, karena destruktif). Parameter opsional {"olderThanDays": 1–3650} default 90 → deleteMany createdAt < cutoff pada FessReaction (reaksi kartu lama yang sudah keluar horizon arsip). Response sukses: deleted count + cutoffIso + note manusiawi.
+   365→  - Semua jalur error SPESIFIK & diverifikasi curl: 401 tanpa/salah secret, 400 body bukan JSON, 400 olderThanDays tidak valid, 200 deleted:0 "database sudah bersih", GET → 405. MENFESS_ADMIN_SECRET baru di-generate (openssl rand -hex) dan ditambahkan ke .env.local; instruksi pemakaian ada di header file route.
+   366→- STYLING DETAIL (mandat polish):
+   367→  - .zine-tilt (globals.css): kartu grid dimiringkan bergantian ±0.35deg (properti CSS `rotate` — independen dari transform, komposisi aman dgn hover:-translate-y-1 kartu), lurus kembali saat hover/focus-within (transition-all kartu menganimasikannya). Dipasang di 3 grid: arsip, koleksi, rekomendasi.
+   368→  - Terverifikasi computed style (0.35deg / -0.35deg), tanpa horizontal overflow (scrollWidth 390 = clientWidth 390 di mobile), hover lurus, dark mode terbaca.
+   369→- QA agent-browser menyeluruh: /fess/[id] rekomendasi (desktop screenshot), /arsip 390px light+dark (toolbar wrap 2 baris rapi, tilt halus, ScrollTopButton muncul), /tersimpan 390px dark (tombol Ekspor daftar + Hapus semua muat sebaris), overflow check 390px bersih, semua route 200 + 404 benar + admin GET 405, console bersih, lint akhir 0 error 0 warning.
+   370→- [Catatan proses] Turbopack menyajikan CSS globals.css STALE setelah edit (chunk name sama, konten lama; restart server pun belum cukup) — fix: hapus folder .next/dev lalu restart dev server; zine-tilt terverifikasi muncul di chunk terlayani. Kalau edit globals.css tidak ter-apply di dev, hapus .next/dev.
+   371→
+   372→Stage Summary:
+   373→- VERIFIED end-to-end: ekspor koleksi (semua jalur feedback spesifik, format teks bersih), rekomendasi kartu acak di halaman kartu (fail-soft, acak jujur), endpoint admin pembersihan reaksi (auth timing-safe, fail-closed, semua error spesifik), zine-tilt di 3 grid (light/dark/mobile tanpa overflow).
+   374→- Keputusan penting: endpoint admin FAIL-CLOSED (kebalikan fail-open kuota IG — destruktif harus aman); rekomendasi = bonus yang menghilang saat data tidak ada; ekspor pakai excerpt mesin caption yang sama biar konsisten dengan semua permukaan.
+   375→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA); Prisma log:['query'] masih aktif di dev; jangan lupa pasang MENFESS_ADMIN_SECRET di Vercel kalau mau endpoint cleanup aktif di produksi.
+   376→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; cron pembersihan reaksi otomatis (panggil endpoint admin dari cron Vercel); share gambar koleksi sebagai collage; reaksi di RSS; regenerasi token IG + DRY_RUN=false saat produksi.
+   377→

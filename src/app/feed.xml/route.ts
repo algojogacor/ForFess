@@ -7,7 +7,7 @@
  * Fail-open: kalau Graph API gagal, tetap keluarkan feed channel yang
  * valid (kosong) — bukan 500. Reader RSS akan menampilkan channel saja.
  */
-import { getArsipItems } from "@/lib/media-pool";
+import { getArsipPage } from "@/lib/media-pool";
 import { excerptFromCaption, extractCategoryFromCaption } from "@/lib/caption";
 import { findCategory, IG_HANDLE, SITE_URL } from "@/constants";
 
@@ -30,7 +30,7 @@ export async function GET() {
 
   try {
     // Pakai pool bersama (cache 5 menit) — hemat kuota Graph API.
-    const result = await getArsipItems(MAX_FEED_ITEMS);
+    const result = await getArsipPage({ limit: MAX_FEED_ITEMS });
     itemsXml = (result?.items ?? [])
       .map((item) => {
         const text = excerptFromCaption(item.caption, 500);

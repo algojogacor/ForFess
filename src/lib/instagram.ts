@@ -174,21 +174,40 @@ function toLikeCount(value: number | undefined): number | undefined {
     : undefined;
 }
 
-/**
- * Ambil postingan terbaru akun IG untuk halaman arsip.
- * Melempar InstagramError jika gagal — pemanggil (API arsip) yang
- * memutuskan degrade ke cache atau empty state.
- */
-export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
-  const data = await graphFetch<{ data?: GraphMediaItem[] }>(`${userId}/media`, {
-    query: {
-      fields: MEDIA_FIELDS,
-      limit: String(limit),
-      access_token: accessToken,
-    },
-  });
+/** Bentuk mentah respons /media Graph API, termasuk info pagination. */
+interface GraphMediaPage {
+  data?: GraphMediaItem[];
+  paging?: {
+    cursors?: { after?: string; before?: string };
+    /** URL halaman berikutnya — hanya ada kalau benar-benar masih ada sisa. */
+    next?: string;
+  };
+}
 
-  return (data.data ?? [])
+/**
+ * Ambil SATU halaman postingan akun IG, dengan cursor pagination asli
+ * dari Graph API. `after` = cursor halaman sebelumnya (opaque, dari Meta).
+ *
+ * `nextCursor` hanya diisi kalau Meta bilang masih ada halaman berikutnya
+ * (ada `paging.next`) — jadi pemanggil tidak pernah dapat cursor mati.
+ * Melempar InstagramError jika gagal.
+ */
+export async function listMediaPage(options: {
+  limit: number;
+  after?: string;
+}): Promise<{ items: ArchiveItem[]; nextCursor: string | null }> {
+  const { limit, after } = options;
+
+  const query: Record<string, string> = {
+    fields: MEDIA_FIELDS,
+    limit: String(limit),
+    access_token: accessToken,
+  };
+  if (after) query.after = after;
+
+  const data = await graphFetch<GraphMediaPage>(`${userId}/media`, { query });
+
+  const items = (data.data ?? [])
     .filter((m) => Boolean(m.media_url))
     .map((m) => ({
       id: m.id,
@@ -198,6 +217,22 @@ export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
       timestamp: m.timestamp,
       likeCount: toLikeCount(m.like_count),
     }));
+
+  const hasMore = typeof data.paging?.next === "string";
+  const cursor = data.paging?.cursors?.after;
+  return {
+    items,
+    nextCursor: hasMore && typeof cursor === "string" && cursor.length > 0 ? cursor : null,
+  };
+}
+
+/**
+ * Ambil postingan terbaru akun IG (halaman pertama saja) — dipakai
+ * media-pool. Melempar InstagramError jika gagal.
+ */
+export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
+  const { items } = await listMediaPage({ limit });
+  return items;
 }
 
 /**

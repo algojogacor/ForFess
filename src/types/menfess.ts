@@ -111,4 +111,10 @@ export interface ArchiveResponse {
   source: ArchiveSource;
   /** Epoch ms saat data terakhir berhasil diambil dari IG. */
   fetchedAt?: number;
+  /**
+   * Cursor opaque buat halaman berikutnya (pagination server-side).
+   * null / tidak ada = semua post sudah habis — jangan tawarkan tombol lagi.
+   * Client tinggal mengembalikan nilai ini apa adanya di request berikutnya.
+   */
+  nextCursor?: string | null;
 }

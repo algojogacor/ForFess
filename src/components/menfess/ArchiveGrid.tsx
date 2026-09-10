@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownWideNarrow,
   Bookmark,
   Instagram,
+  Loader2,
   RefreshCcw,
   Search,
   SearchX,
   Shuffle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -64,8 +66,40 @@ export function ArchiveGrid() {
   const [category, setCategory] = useState<string | null>(null);
   /** Hitungan reaksi pembaca (database situs) untuk post yang dimuat. */
   const [reactionMap, setReactionMap] = useState<Record<string, { total: number } & Partial<Record<string, number>>>>({});
+  /**
+   * Cursor opaque pagination server-side. undefined = belum tahu (load pertama),
+   * null = habis, string = masih ada halaman berikutnya di server.
+   */
+  const [nextCursor, setNextCursor] = useState<string | null | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
   /** Jumlah koleksi lokal — buat badge tombol Tersimpan di toolbar. */
   const { count: koleksiCount } = useKoleksi();
+  /** Ref input pencarian — fokus via shortcut "/". */
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Tarik hitungan reaksi pembaca untuk sekumpulan id, lalu gabung ke map.
+   * `replace` = buang hitungan lama (load pertama); default = gabung
+   * (halaman lanjutan). Reaksi adalah bonus — kegagalan diabaikan diam-diam.
+   */
+  const mergeReactions = useCallback(async (ids: string[], replace = false) => {
+    if (ids.length === 0) return;
+    try {
+      // Maks 50 id per permintaan — sesuai batas endpoint /api/reaksi.
+      const query = ids.slice(0, 50).join(",");
+      const rres = await fetch(`/api/reaksi?ids=${encodeURIComponent(query)}`);
+      if (!rres.ok) return;
+      const rdata = (await rres.json()) as {
+        counts?: Record<string, { total: number } & Partial<Record<string, number>>>;
+      };
+      const counts = rdata.counts ?? {};
+      setTimeout(() => {
+        setReactionMap((prev) => (replace ? counts : { ...prev, ...counts }));
+      }, 0);
+    } catch {
+      // Arsip tetap tampil tanpa chip reaksi.
+    }
+  }, []);
 
   const load = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -76,22 +110,11 @@ export function ArchiveGrid() {
       setItems(loaded);
       setSource(data.source);
       setFetchTime(data.fetchedAt);
+      setNextCursor(data.nextCursor ?? null);
 
-      // Sekalian tarik hitungan reaksi pembaca untuk post yang dimuat
-      // (maks 50 id — sesuai batas endpoint /api/reaksi).
+      // Sekalian tarik hitungan reaksi pembaca untuk post yang dimuat.
       if (loaded.length > 0) {
-        try {
-          const ids = loaded.slice(0, 50).map((m) => m.id).join(",");
-          const rres = await fetch(`/api/reaksi?ids=${encodeURIComponent(ids)}`);
-          if (rres.ok) {
-            const rdata = (await rres.json()) as {
-              counts?: Record<string, { total: number } & Partial<Record<string, number>>>;
-            };
-            setTimeout(() => setReactionMap(rdata.counts ?? {}), 0);
-          }
-        } catch {
-          // Reaksi adalah bonus — arsip tetap tampil tanpa chip reaksi.
-        }
+        await mergeReactions(loaded.map((m) => m.id), true);
       } else {
         setTimeout(() => setReactionMap({}), 0);
       }
@@ -99,15 +122,33 @@ export function ArchiveGrid() {
       // Jaringan gagal total — tampilkan empty state, jangan error keras.
       setItems([]);
       setSource("unavailable");
+      setNextCursor(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [mergeReactions]);
 
   useEffect(() => {
     void load(false);
   }, [load]);
+
+  /**
+   * Shortcut "/" buat loncat ke pencarian — khas situs arsip. Abaikan
+   * kalau user sedang mengetik di input/textarea atau pakai modifier.
+   */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Urutkan SEKALI setiap items/sort berubah — bukan di dalam render.
   const sortedItems = useMemo(() => {
@@ -170,6 +211,7 @@ export function ArchiveGrid() {
   // sudah dimuat (tidak dibatasi halaman yang terlihat) — lebih berguna.
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
+
   const filtered = useMemo(() => {
     if (!sortedItems) return null;
     let result = sortedItems;
@@ -181,6 +223,73 @@ export function ArchiveGrid() {
     }
     return result;
   }, [sortedItems, category, searching, q]);
+
+  /**
+   * Tombol "Muat lebih banyak": dua lapis.
+   * a) Masih ada kartu yang sudah terdimuat tapi belum diperlihatkan →
+   *    cukup geser jendela tampil (instan, tanpa jaringan).
+   * b) Lokal habis tapi server masih punya halaman lanjutan (nextCursor) →
+   *    ambil halaman berikutnya, gabung (dedupe jaga-jaga), lanjutkan.
+   */
+  const loadMore = useCallback(async () => {
+    if (!items || loadingMore) return;
+
+    if (items.length > visibleCount) {
+      setVisibleCount((n) => n + PAGE_SIZE);
+      return;
+    }
+
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/arsip?cursor=${encodeURIComponent(nextCursor)}&limit=18`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) {
+        // Server punya pesan spesifik (cursor basi, IG down) — pakai itu.
+        let serverMsg: string | undefined;
+        try {
+          const body = (await res.json()) as { message?: string };
+          serverMsg = typeof body.message === "string" ? body.message : undefined;
+        } catch {
+          // Body bukan JSON — biarkan pesan generik yang tampil.
+        }
+        throw Object.assign(new Error(serverMsg ?? "fetch gagal"), {
+          status: res.status,
+          serverMsg,
+        });
+      }
+      const data = (await res.json()) as ArchiveResponse;
+      const incoming = data.items ?? [];
+
+      // Dedupe jaga-jaga: pool bisa saja di-refresh di antara dua klik,
+      // dan post baru masuk menggeser isi pool — jangan sampai dobel.
+      const seen = new Set(items.map((m) => m.id));
+      const fresh = incoming.filter((m) => !seen.has(m.id));
+
+      const added = fresh.length;
+      setItems((prev) => [...(prev ?? []), ...fresh]);
+      setNextCursor(data.nextCursor ?? null);
+      if (added > 0) {
+        setVisibleCount((n) => n + Math.max(added, PAGE_SIZE));
+      }
+      void mergeReactions(fresh.map((m) => m.id));
+    } catch (err) {
+      // Halaman lanjutan gagal — data yang sudah tampil tetap utuh,
+      // user diberi tahu persis apa yang terjadi.
+      const extra = err as { status?: number; serverMsg?: string };
+      toast.error("Gagal memuat kartu tambahan", {
+        description:
+          extra.serverMsg ??
+          (extra.status === 400
+            ? "Cursor halaman nggak dikenal server (mungkin data sudah di-refresh). Muat ulang halaman, lalu coba lagi."
+            : "Instagram nggak bisa dihubungi buat post yang lebih lama. Kartu yang sudah tampil tetap aman — coba lagi sebentar."),
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [items, visibleCount, nextCursor, loadingMore, mergeReactions]);
 
   if (loading) {
     return (
@@ -218,10 +327,16 @@ export function ArchiveGrid() {
   const visibleItems = searching
     ? filtered ?? []
     : (filtered ?? []).slice(0, visibleCount);
-  const hasMore = !searching && (filtered?.length ?? 0) > visibleCount;
+  // Sisa kartu yang sudah terdimuat tapi belum diperlihatkan (pagination instan).
+  const localRemaining = searching ? 0 : (filtered?.length ?? 0) - visibleItems.length;
+  // Server masih punya halaman lanjutan — post lebih lama dari yang sudah dimuat.
+  const serverHasMore = !searching && typeof nextCursor === "string";
+  const hasMore = localRemaining > 0 || serverHasMore;
   const totalLabel = searching
     ? `${filtered?.length ?? 0} cocok dari ${items.length} post`
-    : `${items.length} post terakhir`;
+    : `${items.length} post dimuat${
+        typeof nextCursor === "string" ? " · masih ada yang lebih lama" : ""
+      }`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -280,6 +395,7 @@ export function ArchiveGrid() {
               aria-hidden
             />
             <input
+              ref={searchRef}
               type="search"
               value={query}
               onChange={(e) => {
@@ -288,8 +404,17 @@ export function ArchiveGrid() {
               }}
               placeholder={`Cari teks di ${items.length} post ini…`}
               aria-label="Cari menfess di arsip yang dimuat"
-              className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
+              className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-12 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
             />
+            {query.length === 0 ? (
+              <kbd
+                aria-hidden
+                title="Tekan / buat langsung mencari"
+                className="pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 rounded-md border border-ink/25 bg-paper px-1.5 py-px font-mono text-[11px] font-bold text-ink-faint sm:block"
+              >
+                /
+              </kbd>
+            ) : null}
           </div>
 
           {/* Toggle urutan: terbaru / paling disukai / paling direaksi — hanya jika datanya tersedia */}
@@ -430,16 +555,33 @@ export function ArchiveGrid() {
             <div className="flex flex-col items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
                 className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
               >
-                Muat lebih banyak
-                <span className="font-mono text-[12px] text-ink-faint">
-                  {(filtered?.length ?? 0) - visibleCount} lagi
-                </span>
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    Memuat…
+                  </>
+                ) : localRemaining > 0 ? (
+                  <>
+                    Muat lebih banyak
+                    <span className="font-mono text-[12px] text-ink-faint">
+                      {localRemaining} lagi
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Muat lebih banyak
+                    <span className="font-mono text-[12px] text-ink-faint">
+                      dari Instagram
+                    </span>
+                  </>
+                )}
               </button>
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
-                {visibleCount} dari {filtered?.length ?? 0} post
+                {Math.min(visibleCount, filtered?.length ?? 0)} dari {items.length} post
               </p>
             </div>
           ) : null}

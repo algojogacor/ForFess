@@ -6,16 +6,23 @@
  * jadi hitungannya tidak pernah tampil lagi. Pembersihan berkala menjaga
  * database tetap ramping TANPA menyentuh reaksi kartu yang masih tampil.
  *
- * Autentikasi: header `x-admin-secret` dibandingkan dengan env
- * MENFESS_ADMIN_SECRET (constant-time compare). Env tidak dipasang → 401,
- * bukan fail-open: endpoint pembersihan itu destruktif, jadi aman lebih
- * baik daripada nyaman.
+ * Autentikasi (dua gaya, sama-sama constant-time compare):
+ * - POST + header `x-admin-secret`   → untuk menjalankan manual via curl.
+ * - GET  + header `Authorization: Bearer <secret>` → untuk Vercel Cron,
+ *   yang selalu mengirim format itu. Nilainya sama: MENFESS_ADMIN_SECRET
+ *   (pasang juga sebagai CRON_SECRET di Vercel — cron mengirim CRON_SECRET).
  *
- * Pakai:
+ * Env tidak dipasang → 401, bukan fail-open: endpoint pembersihan itu
+ * destruktif, jadi aman lebih baik daripada nyaman.
+ *
+ * Pakai manual:
  *   curl -X POST https://<host>/api/admin/reaksi-cleanup \
  *     -H "x-admin-secret: $MENFESS_ADMIN_SECRET" \
  *     -H "content-type: application/json" \
  *     -d '{"olderThanDays": 90}'
+ *
+ * Cron (terdaftar di vercel.json, tiap Senin 03:00 UTC):
+ *   GET /api/admin/reaksi-cleanup dengan `Authorization: Bearer $CRON_SECRET`
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -26,7 +33,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Bandingkan secret tanpa bocoran timing (panjang disamakan dulu). */
-function secretMatches(provided: string | null, expected: string): boolean {
+function secretMatches(provided: string | null | undefined, expected: string): boolean {
   if (!provided) return false;
   const a = Buffer.from(provided, "utf8");
   const b = Buffer.from(expected, "utf8");
@@ -34,8 +41,18 @@ function secretMatches(provided: string | null, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-export async function POST(req: NextRequest) {
-  /* ---------- Auth ---------- */
+/** Ambil secret dari Authorization: Bearer <token>. */
+function bearerToken(req: NextRequest): string | undefined {
+  const header = req.headers.get("authorization");
+  if (!header) return undefined;
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  return match?.[1]?.trim() || undefined;
+}
+
+/** Auth bersama POST/GET — mengembalikan response error atau null jika lolos. */
+function checkAuth(
+  req: NextRequest
+): NextResponse<{ ok: false; error: string }> | null {
   const expected = process.env.MENFESS_ADMIN_SECRET;
   if (!expected) {
     return NextResponse.json(
@@ -47,16 +64,67 @@ export async function POST(req: NextRequest) {
       { status: 401 }
     );
   }
-  if (!secretMatches(req.headers.get("x-admin-secret"), expected)) {
+  const provided =
+    req.method === "GET" ? bearerToken(req) : req.headers.get("x-admin-secret");
+  if (!secretMatches(provided, expected)) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Secret salah atau hilang. Kirim header x-admin-secret berisi nilai MENFESS_ADMIN_SECRET.",
+          req.method === "GET"
+            ? "Secret salah atau hilang. Kirim header Authorization: Bearer berisi MENFESS_ADMIN_SECRET (Vercel Cron mengirim CRON_SECRET — samakan nilainya)."
+            : "Secret salah atau hilang. Kirim header x-admin-secret berisi nilai MENFESS_ADMIN_SECRET.",
       },
       { status: 401 }
     );
   }
+  return null;
+}
+
+/** Inti pembersihan — dipakai POST (manual) dan GET (cron). */
+async function runCleanup(olderThanDays: number) {
+  const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+  try {
+    const result = await db.fessReaction.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    return NextResponse.json({
+      ok: true,
+      deleted: result.count,
+      olderThanDays,
+      cutoffIso: cutoff.toISOString(),
+      note:
+        result.count === 0
+          ? "Tidak ada reaksi yang lebih tua dari batas itu — database sudah bersih."
+          : `Terhapus ${result.count} reaksi pada kartu lebih tua dari ${olderThanDays} hari.`,
+    });
+  } catch (err) {
+    console.error(
+      "[admin/reaksi-cleanup] DB gagal:",
+      err instanceof Error ? err.message : err
+    );
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Database tidak bisa dijangkau saat pembersihan. Tidak ada yang dihapus — coba lagi sebentar.",
+      },
+      { status: 503 }
+    );
+  }
+}
+
+/** Cron Vercel hanya bisa GET — auth via Bearer, parameter selalu default. */
+export async function GET(req: NextRequest) {
+  const unauthorized = checkAuth(req);
+  if (unauthorized) return unauthorized;
+  return runCleanup(90);
+}
+
+export async function POST(req: NextRequest) {
+  /* ---------- Auth ---------- */
+  const unauthorized = checkAuth(req);
+  if (unauthorized) return unauthorized;
 
   /* ---------- Parameter (opsional) ---------- */
   let olderThanDays = 90;
@@ -96,35 +164,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
-
-  /* ---------- Eksekusi ---------- */
-  try {
-    const result = await db.fessReaction.deleteMany({
-      where: { createdAt: { lt: cutoff } },
-    });
-    return NextResponse.json({
-      ok: true,
-      deleted: result.count,
-      olderThanDays,
-      cutoffIso: cutoff.toISOString(),
-      note:
-        result.count === 0
-          ? "Tidak ada reaksi yang lebih tua dari batas itu — database sudah bersih."
-          : `Terhapus ${result.count} reaksi pada kartu lebih tua dari ${olderThanDays} hari.`,
-    });
-  } catch (err) {
-    console.error(
-      "[admin/reaksi-cleanup] DB gagal:",
-      err instanceof Error ? err.message : err
-    );
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Database tidak bisa dijangkau saat pembersihan. Tidak ada yang dihapus — coba lagi sebentar.",
-      },
-      { status: 503 }
-    );
-  }
+  return runCleanup(olderThanDays);
 }

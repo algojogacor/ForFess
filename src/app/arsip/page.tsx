@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instagram } from "lucide-react";
 import { ArchiveGrid } from "@/components/menfess/ArchiveGrid";
+import { ScrollProgress } from "@/components/menfess/ScrollProgress";
 import { ScrollTopButton } from "@/components/menfess/ScrollTopButton";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ export default function ArsipPage() {
 
         <ArchiveGrid />
       </div>
+      <ScrollProgress />
       <ScrollTopButton />
     </div>
   );
