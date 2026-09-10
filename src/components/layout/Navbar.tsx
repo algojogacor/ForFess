@@ -7,6 +7,7 @@ import { useSyncExternalStore, useState } from "react";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { useKoleksi } from "@/lib/koleksi";
 
 /** Deteksi mount tanpa setState-in-effect (aman hydration & lint). */
 const emptySubscribe = () => () => {};
@@ -22,6 +23,7 @@ const NAV_LINKS = [
   { href: "/kirim", label: "Kirim" },
   { href: "/arsip", label: "Arsip" },
   { href: "/acak", label: "Acak" },
+  { href: "/tersimpan", label: "Tersimpan" },
   { href: "/about", label: "Tentang" },
   { href: "/privacy", label: "Privasi" },
   { href: "/terms", label: "Ketentuan" },
@@ -102,6 +104,8 @@ export function ThemeToggle({ className }: { className?: string }) {
 export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  /** Jumlah koleksi tersimpan — badge kecil di link Tersimpan (0 = disembunyikan). */
+  const { count: koleksiCount } = useKoleksi();
 
   const closeMenu = () => setOpen(false);
 
@@ -140,6 +144,14 @@ export function Navbar() {
                 <span className={cn(active && "bg-signal px-1 text-ink-fixed")}>
                   {link.label}
                 </span>
+                {link.href === "/tersimpan" && koleksiCount > 0 ? (
+                  <span
+                    className="ml-1 inline-block rounded-full border border-ink/20 bg-signal px-1.5 py-px font-mono text-[10px] font-bold leading-none text-ink-fixed"
+                    title={`${koleksiCount} kartu tersimpan di perangkat ini`}
+                  >
+                    {koleksiCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -188,11 +200,19 @@ export function Navbar() {
                   onClick={closeMenu}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "rounded-lg px-3 py-3 font-mono text-sm uppercase tracking-wider",
+                    "flex items-center justify-between rounded-lg px-3 py-3 font-mono text-sm uppercase tracking-wider",
                     active ? "bg-signal-soft font-bold text-ink" : "text-ink-soft"
                   )}
                 >
                   {link.label}
+                  {link.href === "/tersimpan" && koleksiCount > 0 ? (
+                    <span
+                      className="rounded-full border border-ink/20 bg-signal px-1.5 py-px font-mono text-[10px] font-bold leading-none text-ink-fixed"
+                      aria-label={`${koleksiCount} kartu tersimpan`}
+                    >
+                      {koleksiCount}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

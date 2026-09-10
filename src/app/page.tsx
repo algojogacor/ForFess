@@ -85,6 +85,10 @@ const FAQS = [
     a: "Boleh. Ada jeda 20 detik antar kiriman dan maksimal 3 kiriman per 15 menit dari satu koneksi — cukup untuk cerita yang beda-beda, tapi nggak cukup untuk membanjiri feed.",
   },
   {
+    q: "Bisa nyimpen menfess favorit?",
+    a: "Bisa. Arahkan kursor ke kartu di halaman Arsip lalu tekan ikon bookmark di pojoknya — kartu itu masuk koleksi \"Tersimpan\". Koleksinya hidup di perangkat kamu sendiri (nggak ada server, nggak ada akun), jadi kamu bisa buka lagi kapan pun dari menu Tersimpan, dan menghapusnya begitu nggak cocok lagi.",
+  },
+  {
     q: "Apakah data atau teks saya disimpan di situs ini?",
     a: "Nggak. Server tidak menyimpan arsip teks kiriman — daftar arsip di situs ini diambil langsung dari postingan Instagram. Draf yang belum terkirim dan riwayat “Kiriman kamu” tersimpan hanya di browser kamu sendiri dan bisa kamu hapus kapan saja.",
   },

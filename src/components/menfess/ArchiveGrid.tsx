@@ -1,39 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { format, formatDistanceToNowStrict } from "date-fns";
-import { id as localeId } from "date-fns/locale";
 import Link from "next/link";
 import {
   ArrowDownWideNarrow,
-  Check,
-  ExternalLink,
-  Eye,
-  Heart,
+  Bookmark,
   Instagram,
   RefreshCcw,
   Search,
   SearchX,
-  Share2,
   Shuffle,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { IG_HANDLE, IG_PROFILE_URL, MENFESS_CATEGORIES, REACTIONS, SITE_URL, findCategory } from "@/constants";
+import {
+  MenfessCard,
+  SkeletonCard,
+  formatDate,
+  type ReactionChip,
+} from "@/components/menfess/MenfessCard";
+import { useKoleksi } from "@/lib/koleksi";
+import { IG_HANDLE, IG_PROFILE_URL, MENFESS_CATEGORIES, REACTIONS, findCategory } from "@/constants";
 import type { ArchiveItem, ArchiveResponse, ArchiveSource } from "@/types/menfess";
 import { excerptFromCaption, extractCategoryFromCaption } from "@/lib/caption";
 import { cn } from "@/lib/utils";
 
 /** Jumlah kartu per "halaman" tombol Muat lebih banyak. */
 const PAGE_SIZE = 9;
-
-/** Chip reaksi pembaca di meta kartu — emoji terbanyak + jumlah total. */
-interface ReactionChip {
-  emoji: string;
-  label: string;
-  total: number;
-}
 
 /** Dari hitungan per-kind, ambil reaksi dominan buat chip kartu. */
 function dominantReaction(counts: { total: number } & Partial<Record<string, number>>): ReactionChip | null {
@@ -48,199 +41,6 @@ function dominantReaction(counts: { total: number } & Partial<Record<string, num
   return { emoji: best.emoji, label: best.label, total: counts.total };
 }
 
-function formatDate(timestamp: string | undefined): string {
-  if (!timestamp) return "";
-  try {
-    return format(new Date(timestamp), "d MMM yyyy · HH:mm", { locale: localeId });
-  } catch {
-    return "";
-  }
-}
-
-function relativeTime(timestamp: string | undefined): string {
-  if (!timestamp) return "";
-  try {
-    return formatDistanceToNowStrict(new Date(timestamp), {
-      locale: localeId,
-      addSuffix: true,
-    });
-  } catch {
-    return "";
-  }
-}
-
-/** Bagikan / salin tautan satu kartu — Web Share API, fallback ke clipboard.
- *  Yang dibagikan adalah halaman kartu LOKAL (cepat, ada OG image), bukan IG. */
-async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared" | "copied"> {
-  const url = `${SITE_URL}/fess/${item.id}`;
-  const text = excerpt ? `Menfess: "${excerpt}"` : `Menfess dari ${IG_HANDLE}`;
-
-  if (typeof navigator.share === "function") {
-    try {
-      await navigator.share({ title: "Fess UNAIR", text, url });
-      return "shared";
-    } catch (err) {
-      // User batal share (AbortError) — bukan kegagalan, jangan fallback.
-      if (err instanceof DOMException && err.name === "AbortError") {
-        throw err;
-      }
-      // Share gagal karena alasan lain → turun ke clipboard.
-    }
-  }
-
-  await navigator.clipboard.writeText(url);
-  return "copied";
-}
-
-function ItemCard({ item, reaction }: { item: ArchiveItem; reaction?: ReactionChip }) {
-  const excerpt = excerptFromCaption(item.caption, 160);
-  const category = findCategory(extractCategoryFromCaption(item.caption) ?? "");
-  const date = formatDate(item.timestamp);
-  const relative = relativeTime(item.timestamp);
-  const [copied, setCopied] = useState(false);
-
-  const handleShare = async () => {
-    try {
-      const result = await shareOrCopy(item, excerpt);
-      if (result === "copied") {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-        toast.success("Tautan tersalin", {
-          description: "Browser kamu nggak dukung dialog share, jadi tautannya disalin ke clipboard.",
-        });
-      } else {
-        toast.success("Siap dibagikan!");
-      }
-    } catch (err) {
-      // User batal share — bukan error yang perlu diberitahu.
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      // Clipboard/share gagal betulan (izin diblokir, dsb.) — jangan diam.
-      toast.error("Gagal menyalin tautan", {
-        description: "Browser memblokir akses clipboard. Pakai tombol \"Buka di IG\" lalu bagikan dari Instagram, ya.",
-      });
-    }
-  };
-
-  return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--hard-strong)] focus-within:shadow-[6px_6px_0_0_var(--hard-strong)]">
-      <Link
-        href={`/fess/${item.id}`}
-        aria-label={excerpt ? `Buka halaman kartu menfess: ${excerpt}` : "Buka halaman kartu menfess"}
-        className="relative block aspect-square overflow-hidden border-b-2 border-ink bg-paper outline-none focus-visible:shadow-[inset_0_0_0_3px_var(--focus-ring)]"
-      >
-        {item.mediaUrl ? (
-          <img
-            src={item.mediaUrl}
-            alt={excerpt || "Kartu menfess di Instagram"}
-            loading="lazy"
-            className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div className="grid size-full place-items-center text-ink-faint">
-            <Instagram className="size-8" aria-hidden />
-          </div>
-        )}
-        <span className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-md border-2 border-ink bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-          <Eye className="size-3" aria-hidden />
-          Lihat kartu
-        </span>
-      </Link>
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
-          {typeof item.likeCount === "number" ? (
-            <span
-              className="inline-flex items-center gap-1 font-bold tabular-nums text-tomato-deep"
-              title={`${item.likeCount} suka di Instagram`}
-            >
-              <Heart className="size-3 fill-current" aria-hidden />
-              {item.likeCount}
-            </span>
-          ) : null}
-          {reaction ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-ink/25 bg-signal-soft/60 px-1.5 py-px font-bold tabular-nums text-ink"
-              title={`${reaction.total} reaksi pembaca di situs ini (terbanyak: ${reaction.label})`}
-            >
-              <span aria-hidden className="text-[11px] leading-none">{reaction.emoji}</span>
-              {reaction.total}
-            </span>
-          ) : null}
-          {category ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-tomato-deep/40 px-1.5 py-px font-mono text-[10px] font-bold uppercase tracking-wider text-tomato-deep"
-              title={`Kategori: ${category.label}`}
-            >
-              <span aria-hidden className="text-[10px] leading-none">{category.emoji}</span>
-              {category.label}
-            </span>
-          ) : null}
-          {relative ? <span title={date}>{relative}</span> : date ? <span>{date}</span> : "Tanpa tanggal"}
-        </div>
-        <p className="flex-1 text-[15px] leading-relaxed text-ink-soft">
-          {excerpt || "Tanpa caption."}
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Link
-            href={`/fess/${item.id}`}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
-          >
-            Halaman kartu
-            <Eye className="size-3.5" aria-hidden />
-          </Link>
-          {item.permalink ? (
-            <a
-              href={item.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
-            >
-              Buka di IG
-              <ExternalLink className="size-3.5" aria-hidden />
-            </a>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => void handleShare()}
-            aria-label={
-              copied
-                ? "Tautan tersalin ke clipboard"
-                : `Bagikan menfess${excerpt ? `: ${excerpt.slice(0, 60)}` : ""}`
-            }
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-paper px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-ink transition-colors hover:bg-signal-soft"
-          >
-            {copied ? (
-              <>
-                <Check className="size-3.5 text-tomato-deep" aria-hidden />
-                Tersalin
-              </>
-            ) : (
-              <>
-                <Share2 className="size-3.5" aria-hidden />
-                Bagikan
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div
-      aria-hidden
-      className="animate-pulse overflow-hidden rounded-2xl border-2 border-ink/20 bg-paper-raised"
-    >
-      <div className="aspect-square border-b-2 border-ink/10 bg-muted" />
-      <div className="flex flex-col gap-2 p-4">
-        <div className="h-3 w-24 rounded bg-muted" />
-        <div className="h-3 w-full rounded bg-muted" />
-        <div className="h-3 w-4/5 rounded bg-muted" />
-      </div>
-    </div>
-  );
-}
 
 /**
  * Grid arsip menfess — data live dari /api/arsip (Instagram Graph API).
@@ -264,6 +64,8 @@ export function ArchiveGrid() {
   const [category, setCategory] = useState<string | null>(null);
   /** Hitungan reaksi pembaca (database situs) untuk post yang dimuat. */
   const [reactionMap, setReactionMap] = useState<Record<string, { total: number } & Partial<Record<string, number>>>>({});
+  /** Jumlah koleksi lokal — buat badge tombol Tersimpan di toolbar. */
+  const { count: koleksiCount } = useKoleksi();
 
   const load = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -436,6 +238,21 @@ export function ArchiveGrid() {
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            href="/tersimpan"
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-signal-soft"
+          >
+            <Bookmark className="size-3.5" aria-hidden />
+            Tersimpan
+            {koleksiCount > 0 ? (
+              <span
+                className="rounded-full bg-signal px-1.5 py-px font-mono text-[10px] font-bold tabular-nums leading-none text-ink-fixed"
+                title={`${koleksiCount} kartu di koleksi perangkat ini`}
+              >
+                {koleksiCount}
+              </span>
+            ) : null}
+          </Link>
+          <Link
             href="/acak"
             className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-signal-soft"
           >
@@ -606,7 +423,7 @@ export function ArchiveGrid() {
             {visibleItems.map((item) => {
               const rc = reactionMap[item.id];
               const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;
-              return <ItemCard key={item.id} item={item} reaction={reaction} />;
+              return <MenfessCard key={item.id} item={item} reaction={reaction} />;
             })}
           </div>
           {hasMore ? (

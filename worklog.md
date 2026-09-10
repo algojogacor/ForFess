@@ -316,3 +316,30 @@ Stage Summary:
 - Keputusan penting: "bebas" tidak menulis marker (post lama = bebas tanpa migrasi); kategori tak dikenal → default diam-diam (tidak menolak kiriman); chip filter hanya untuk kategori yang ada isinya; strip landing tampil kalau minimal satu angka tersedia.
 - Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA) — filter arsip baru akan kelihatan datanya setelah ada post asli berkategori.
 - Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; kategori di RSS/JSON-LD per item; share gambar kartu langsung dari arsip (canvas→PNG); admin cleanup endpoint reaksi post tua; regenerasi token IG + DRY_RUN=false saat produksi.
+
+---
+
+Task ID: 15
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — Koleksi "Tersimpan" (bookmark perangkat), kartu bersama, polish RSS/styling
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, 14 route 200, console fresh-session bersih, dev.log hanya known issue content_publishing_limit fail-open + DRY_RUN). Keputusan: lanjut FITUR BARU dari backlog, bukan bugfix.
+- KOLEKSI TERSIMPAN (fitur utama ronde ini — bookmark menfess favorit, 100% localStorage, tanpa server/akun):
+  - lib/koleksi.ts: simpan SNAPSHOT data publik kartu (bukan cuma ID — URL CDN IG cepat expired & arsip cuma ~50 post, kartu lama harus tetap bisa dibuka). Maks 100 kartu FIFO. API: listKoleksi/koleksiIds/isSaved/saveFess/unsaveFess/toggleFess/clearKoleksi + hook useKoleksi (useSyncExternalStore — sinkron antar komponen & antar-tab via event custom + event storage; cache referensi stabil, invalidasi manual di handler storage). Semua fail-soft.
+  - [BUG ditemukan & diperbaiki saat QA] lupa import useSyncExternalStore → Runtime ReferenceError merash halaman arsip (dev server sempat mati, restart via scripts/dev-server.sh). Fix: import React + rapikan deklarasi konstanta di atas hook.
+  - SaveButton (variant "overlay" ikon pojok kartu / "row" tombol berlabel): satu sumber state via useKoleksi → semua tombol di semua halaman selalu sinkar. aria-pressed, toast spesifik simpan/hapus. Detail UX: overlay tersembunyi sampai hover DI PERANGKAT HOVER SAJA — custom variant `no-hover` (@custom-variant @media not (hover: hover) di globals.css) bikin tombol selalu tampak di layar sentuh (variant arbitrary [@media(hover:hover)]: terbukti tidak digenerate Tailwind 4 — dicek via document.styleSheets, solusi @custom-variant terverifikasi bekerja via matchMedia).
+  - MenfessCard: kartu arsip diekstrak jadi komponen bersama (arsip + koleksi). Perbaikan internal: CardImage dgn fallback jujur — kalau <img> CDN IG gagal (onError) → render ulang kartu via PostPreview dari caption (mesin yang sama dgn kartu aslinya), state failedKey derived dari id+URL (tanpa setState-in-effect, lint rule react-hooks/set-state-in-effect lolos bersih).
+  - /tersimpan (BARU): halaman koleksi — header zine, skeleton saat hydration (mencegah flash empty-state), search dalam snapshot, "Hapus semua" konfirmasi dua langkah (auto-revert 3 detik), chip reaksi live via bulk /api/reaksi, empty state ilustratif bintang + CTA arsip/acak. robots noindex (data personal per perangkat) & sengaja TIDAK masuk sitemap (terverifikasi).
+  - Entry point: Navbar link TERSIMPAN + badge count live (desktop & mobile menu), toolbar arsip tombol Tersimpan + badge.
+  - Wire: arsip (overlay), /acak (row di baris meta), /fess/[id] (row di baris aksi — snapshot dikirim dari server component, serializable).
+- STYLING DETAIL (wajib ronde ini): ScrollTopButton melayang zine (hard shadow, muncul setelah 480px scroll, di atas footer) di /arsip & /tersimpan; badge count kuning di navbar/toolbar; empty-state koleksi berilustrasi; toolbar arsip kini 3 tombol (Tersimpan/Acak/Muat ulang) yang wrap rapi di 390px.
+- RSS (feed.xml): item berkategori kini berjudul prefix "[Label]" + elemen <category>; post tanpa kategori tetap polos (terverifikasi XML valid).
+- PRIVASI + LANDING: privacy section "Koleksi tersimpan" (data publik kartu, di perangkat, bisa dihapus); FAQ baru "Bisa nyimpen menfess favorit?" (JSON-LD ikut otomatis).
+- QA agent-browser menyeluruh (fresh session): simpan dari arsip → badge navbar+toolbar instan + toast; unsave dari /tersimpan → kartu hilang, badge turun, /arsip sinkar; simpan dari /fess/[id] → reload → state persist (localStorage snapshot terverifikasi); /acak row tersinkar; fallback render dgn snapshot mediaUrl rusak → PostPreview + stamp kategori "CURHAT" tampil; search koleksi (cocok 1, kosong → tombol bersihkan); hapus semua dua langkah → localStorage null + empty state; mobile 390px (overlay tombol tampak tanpa hover, toolbar wrap 2 baris rapi); dark mode /tersimpan OK; 13 route dicek: semua 200 + 404 benar; console fresh-session 0 error di semua halaman (error "Ecmascript file had an error" sebelumnya = buffer console sesi lama sebelum fix import — hilang setelah browser direstart); dev.log hanya log normal; lint akhir 0 error 0 warning.
+
+Stage Summary:
+- VERIFIED end-to-end: koleksi tersimpan (simpan/hapus/persist/sinkar antar halaman & tab, fallback kartu expired, search, clear-all, mobile + dark), ScrollTopButton, RSS kategori.
+- Keputusan penting: koleksi = snapshot localStorage (tahan URL IG expired & horizon arsip 50 post), noindex + tanpa sitemap; tombol overlay selalu tampak di perangkat sentuh via @custom-variant no-hover.
+- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — fail-open by design, verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA); Prisma log:['query'] masih aktif di dev; bunx tsc --noEmit mencakup folder examples/skills milik scaffold (error pre-existing, bukan kode app).
+- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; badge "Tersimpan" count di halaman arsip kartu (chip kecil di meta); share koleksi sebagai daftar teks; admin cleanup endpoint reaksi post tua (butuh desain secret header); regenerasi token IG + DRY_RUN=false saat produksi.

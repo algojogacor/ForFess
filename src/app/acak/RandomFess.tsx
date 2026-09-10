@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ReactionBar } from "@/components/menfess/ReactionBar";
+import { SaveButton } from "@/components/menfess/SaveButton";
 import { IG_HANDLE, SITE_URL } from "@/constants";
 import type { ArchiveItem } from "@/types/menfess";
 import { extractMenfessText } from "@/lib/caption";
@@ -210,6 +211,7 @@ export function RandomFess() {
               ) : null}
 
               <div className="ml-auto flex items-center gap-3">
+                <SaveButton item={item} variant="row" />
                 <Link
                   href={`/fess/${item.id}`}
                   className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"

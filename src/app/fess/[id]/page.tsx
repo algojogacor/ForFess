@@ -17,6 +17,7 @@ import { id as localeId } from "date-fns/locale";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { MenfessActions } from "@/components/menfess/MenfessActions";
+import { SaveButton } from "@/components/menfess/SaveButton";
 import { ReactionBar } from "@/components/menfess/ReactionBar";
 import { getMediaCached } from "@/lib/media-lookup";
 import { InstagramError } from "@/lib/instagram";
@@ -182,9 +183,21 @@ export default async function FessDetailPage({ params }: PageProps) {
             {/* ==== Reaksi pembaca (data nyata dari database situs) ==== */}
             <ReactionBar fessId={id} />
 
-            {/* ==== Aksi: bagikan lokal / buka IG ==== */}
+            {/* ==== Aksi: bagikan lokal / buka IG / simpan koleksi ==== */}
             <div className="mt-5 flex flex-wrap items-center gap-3 border-t-2 border-dashed border-ink/15 pt-5">
               <MenfessActions fessId={id} text={text} />
+              {/* Snapshot kartu untuk koleksi localStorage (data publik kartu, bukan data rahasia) */}
+              <SaveButton
+                item={{
+                  id: media.id,
+                  caption: media.caption,
+                  mediaUrl: media.mediaUrl,
+                  permalink: media.permalink,
+                  timestamp: media.timestamp,
+                  likeCount: media.likeCount,
+                }}
+                variant="row"
+              />
               {media.permalink ? (
                 <a
                   href={media.permalink}

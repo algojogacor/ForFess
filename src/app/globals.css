@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Perangkat tanpa hover (layar sentuh) — dipakai tombol simpan overlay
+   supaya selalu terlihat tanpa harus di-hover dulu. */
+@custom-variant no-hover (@media not (hover: hover));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

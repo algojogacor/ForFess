@@ -8,8 +8,8 @@
  * valid (kosong) — bukan 500. Reader RSS akan menampilkan channel saja.
  */
 import { getArsipItems } from "@/lib/media-pool";
-import { excerptFromCaption } from "@/lib/caption";
-import { IG_HANDLE, SITE_URL } from "@/constants";
+import { excerptFromCaption, extractCategoryFromCaption } from "@/lib/caption";
+import { findCategory, IG_HANDLE, SITE_URL } from "@/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +34,14 @@ export async function GET() {
     itemsXml = (result?.items ?? [])
       .map((item) => {
         const text = excerptFromCaption(item.caption, 500);
-        const title = excerptFromCaption(item.caption, 80) || "Menfess tanpa teks";
+        const excerpt = excerptFromCaption(item.caption, 80);
+        // Kategori ikut feed: judul berprefix [Label] + elemen <category> —
+        // pembaca RSS bisa menyaring tanpa buka tautan.
+        const catId = extractCategoryFromCaption(item.caption);
+        const cat = catId ? findCategory(catId) : undefined;
+        const title = cat
+          ? `[${cat.label}] ${excerpt || "Menfess tanpa teks"}`
+          : excerpt || "Menfess tanpa teks";
         const link = `${SITE_URL}/fess/${item.id}`;
         const pubDate = item.timestamp
           ? new Date(item.timestamp).toUTCString()
@@ -46,6 +53,7 @@ export async function GET() {
       <link>${escapeXml(link)}</link>
       <guid isPermaLink="true">${escapeXml(guid)}</guid>
       ${pubDate ? `<pubDate>${pubDate}</pubDate>` : ""}
+      ${cat ? `<category>${escapeXml(cat.label)}</category>` : ""}
       <description>${escapeXml(text || "(tanpa teks)")}</description>
     </item>`;
       })

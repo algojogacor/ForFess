@@ -83,6 +83,16 @@ export default function PrivacyPage() {
               perangkat mana pun.
             </li>
             <li>
+              <strong className="font-bold text-ink">Koleksi tersimpan</strong>{" "}
+              — tombol bookmark di kartu arsip menyimpan salinan data publik
+              kartu (isi menfess, kategori, tanggal, jumlah suka) di
+              localStorage perangkat kamu saja, supaya kartu favorit tetap
+              bisa dibuka dari halaman Tersimpan. Tidak ada yang dikirim ke
+              server kami — server bahkan tidak tahu kamu menyimpan apa —
+              dan kamu bisa menghapusnya kapan saja lewat tombol hapus di
+              halaman itu.
+            </li>
+            <li>
               <strong className="font-bold text-ink">Gambar menfess</strong> —
               dibuat otomatis di server lalu diunggah sesaat ke Cloudinary
               agar bisa dibaca Instagram, dan langsung dihapus setelah posting
