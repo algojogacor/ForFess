@@ -1,0 +1,141 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button-variants";
+
+const NAV_LINKS = [
+  { href: "/kirim", label: "Kirim" },
+  { href: "/about", label: "Tentang" },
+  { href: "/privacy", label: "Privasi" },
+  { href: "/terms", label: "Ketentuan" },
+] as const;
+
+/** Logo Fess UNAIR — blok tinta dengan bintang kuning (motif anonimitas). */
+function LogoMark({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid size-9 place-items-center rounded-lg border-2 border-ink bg-ink",
+        className
+      )}
+    >
+      <svg viewBox="0 0 64 64" className="size-5" fill="none">
+        <path
+          d="M32 10v44M12 21l40 22M52 21L12 43"
+          stroke="#FFC800"
+          strokeWidth="9"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+export function Navbar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  const closeMenu = () => setOpen(false);
+
+  return (
+    <header className="sticky top-0 z-50 border-b-2 border-ink bg-paper/90 backdrop-blur-md">
+      <nav
+        aria-label="Navigasi utama"
+        className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+      >
+        <Link
+          href="/"
+          className="group flex items-center gap-2.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 rounded-lg"
+          aria-label="Fess UNAIR — halaman utama"
+        >
+          <LogoMark className="transition-transform duration-200 group-hover:-rotate-6" />
+          <span className="text-lg font-bold tracking-tight">
+            fess<span className="text-tomato">*</span>unair
+          </span>
+        </Link>
+
+        {/* Link desktop */}
+        <div className="hidden items-center gap-1 md:flex">
+          {NAV_LINKS.map((link) => {
+            const active =
+              pathname === link.href || pathname.startsWith(link.href + "/");
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "rounded-lg px-3 py-2 font-mono text-[13px] uppercase tracking-wider transition-colors hover:bg-ink/5",
+                  active ? "text-ink font-bold" : "text-ink-soft"
+                )}
+              >
+                <span className={cn(active && "bg-signal px-1")}>
+                  {link.label}
+                </span>
+              </Link>
+            );
+          })}
+          <Link
+            href="/kirim"
+            className={cn(buttonVariants({ variant: "signal", size: "sm" }), "ml-2")}
+          >
+            Kirim menfess
+          </Link>
+        </div>
+
+        {/* Tombol menu mobile */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          aria-label={open ? "Tutup menu" : "Buka menu"}
+          className="grid size-10 place-items-center rounded-lg border-2 border-ink bg-paper-raised md:hidden"
+        >
+          {open ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </nav>
+
+      {/* Panel mobile */}
+      {open ? (
+        <div
+          id="mobile-menu"
+          className="border-t-2 border-ink bg-paper md:hidden"
+        >
+          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
+            {NAV_LINKS.map((link) => {
+              const active =
+                pathname === link.href || pathname.startsWith(link.href + "/");
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeMenu}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "rounded-lg px-3 py-3 font-mono text-sm uppercase tracking-wider",
+                    active ? "bg-signal-soft font-bold text-ink" : "text-ink-soft"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/kirim"
+              onClick={() => setOpen(false)}
+              className={cn(buttonVariants({ variant: "signal", size: "md" }), "mt-2 w-full")}
+            >
+              Kirim menfess
+            </Link>
+          </div>
+        </div>
+      ) : null}
+    </header>
+  );
+}

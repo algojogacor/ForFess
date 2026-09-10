@@ -1,0 +1,193 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-grotesk);
+  --font-mono: var(--font-spacemono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* == Identitas Fess UNAIR: kertas krem × tinta × kuning signal == */
+  --color-paper: #f7f2e8;
+  --color-paper-raised: #fffdf6;
+  --color-ink: #161310;
+  --color-ink-soft: #4a4437;
+  --color-ink-faint: #776d5b;
+  --color-signal: #ffc800;
+  --color-signal-deep: #e8ae00;
+  --color-signal-soft: #ffefb8;
+  --color-tomato: #e4572e;
+  --color-tomato-deep: #c23f1b;
+
+  /* Motion: hanya yang punya tujuan */
+  --animate-marquee: marquee 32s linear infinite;
+  --animate-rise: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: #f7f2e8;
+  --foreground: #161310;
+  --card: #fffdf6;
+  --card-foreground: #161310;
+  --popover: #fffdf6;
+  --popover-foreground: #161310;
+  --primary: #ffc800;
+  --primary-foreground: #161310;
+  --secondary: #161310;
+  --secondary-foreground: #f7f2e8;
+  --muted: #efe7d6;
+  --muted-foreground: #776d5b;
+  --accent: #ffefb8;
+  --accent-foreground: #161310;
+  --destructive: #d64524;
+  --destructive-foreground: #fffdf6;
+  --border: rgba(22, 19, 16, 0.15);
+  --input: rgba(22, 19, 16, 0.2);
+  --ring: #161310;
+  --chart-1: #ffc800;
+  --chart-2: #e4572e;
+  --chart-3: #776d5b;
+  --chart-4: #4a4437;
+  --chart-5: #e8ae00;
+  --sidebar: #f7f2e8;
+  --sidebar-foreground: #161310;
+  --sidebar-primary: #ffc800;
+  --sidebar-primary-foreground: #161310;
+  --sidebar-accent: #ffefb8;
+  --sidebar-accent-foreground: #161310;
+  --sidebar-border: rgba(22, 19, 16, 0.15);
+  --sidebar-ring: #161310;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: #ffc800;
+    color: #161310;
+  }
+}
+
+/* Scrollbar tipis bergaya tinta — untuk area yang bisa discroll */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(22, 19, 16, 0.35) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 19, 16, 0.3);
+  border-radius: 8px;
+  border: 2px solid #f7f2e8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* == Utilitas khas brand == */
+
+/* Grid titik halus — tekstur kertas untuk section tertentu */
+.bg-dotgrid {
+  background-image: radial-gradient(rgba(22, 19, 16, 0.09) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Garis-garis diagonal kuning ala tape peringatan */
+.bg-tape {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #ffc800 0px,
+    #ffc800 14px,
+    #161310 14px,
+    #161310 28px
+  );
+}
+
+/* Teks outline ala poster */
+.text-outline {
+  -webkit-text-stroke: 2px #161310;
+  color: transparent;
+}
+
+/* Highlight marker kuning di belakang teks */
+.marker-highlight {
+  background-image: linear-gradient(100deg, transparent 2%, #ffc800 2%, #ffc800 96%, transparent 96%);
+  background-repeat: no-repeat;
+  background-size: 100% 62%;
+  background-position: 0 78%;
+}
