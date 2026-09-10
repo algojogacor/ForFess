@@ -1,0 +1,260 @@
+     1→# Worklog — Fess UNAIR
+     2→
+     3→Platform menfess anonim untuk civitas akademika Universitas Airlangga.
+     4→Post anonim → generate gambar (Satori 1080×1080) → upload Cloudinary → post Instagram Graph API → delete gambar.
+     5→
+     6→---
+     7→
+     8→Task ID: 1
+     9→Agent: main (Z.ai Code)
+    10→Task: Setup environment & dependencies
+    11→
+    12→Work Log:
+    13→- Install deps: satori@0.33.4, cloudinary@2.11.0, @fontsource/space-grotesk@5.3.0, @fontsource/space-mono@5.3.0 (sharp sudah ada di scaffold)
+    14→- Buat .env.local berisi kredensial IG + Cloudinary + Turnstile dari user, plus flag tambahan: NEXT_PUBLIC_SITE_URL, IG_API_VERSION=v22.0, MENFESS_DRY_RUN=true (agar QA lokal tidak posting ke IG asli)
+    15→- Buat scripts/generate-fonts.mjs → generate src/lib/fonts.generated.ts (WOFF base64 untuk Satori: Space Grotesk 400/500/700 + Space Mono 400)
+    16→- Copy woff2 Space Grotesk/Mono ke src/assets/fonts/ untuk next/font/local (UI, offline-safe)
+    17→- Identitas visual yang dipilih: "buletin kampus / zine editorial" — kertas krem (#F7F2E8), tinta hampir hitam (#161310), kuning signal (#FFC800) sebagai nod ke identitas kuning UNAIR, aksen merah tomat (#E4572E). Motif brand: tanda bintang "*" (anonimitas — "kamu, yang nggak disebut namanya"). Tipografi: Space Grotesk (display+body) + Space Mono (label/ticker).
+    18→
+    19→Stage Summary:
+    20→- Fondasi environment selesai; font Satori & UI siap dipakai
+    21→- Keputusan penting: MENFESS_DRY_RUN=true di .env.local (pipeline berhenti setelah generate gambar, tanpa upload Cloudinary / posting IG) — WAJIB diganti false di produksi
+    22→
+    23→---
+    24→
+    25→Task ID: 2
+    26→Agent: main (Z.ai Code)
+    27→Task: Foundation — constants, types, config terpusat
+    28→
+    29→Work Log:
+    30→- src/constants/index.ts: MAX_CHARS=500, MIN_CHARS=2, IG_HANDLE, SITE_URL/SITE_HOST, IG_API_VERSION (env override, default v22.0), IG_GRAPH_URL, TURNSTILE_VERIFY_URL, CLOUDINARY_FOLDER, RATE_LIMIT (cooldown 20s, max 3/15 menit, window 15 menit), IG_QUOTA_BUFFER=1, IMAGE_FONT_TIERS
+    31→- src/types/menfess.ts: SubmitErrorCode (9 kode spesifik), SubmitResponse, CheckLimitResponse, InstagramQuota, TurnstileResult, CloudinaryUploadResult — kontrak API jelas antara client & server
+    32→- src/lib/config.ts: akses env terpusat + requireEnv() yang melempar MissingEnvError menyebut nama var yang hilang; helper isDryRun(), isTurnstileWidgetEnabled()
+    33→
+    34→Stage Summary:
+    35→- Semua "magic value" terpusat di constants; env tervalidasi saat startup
+    36→
+    37→---
+    38→
+    39→Task ID: 3
+    40→Agent: main (Z.ai Code)
+    41→Task: Lib services — turnstile, cloudinary, instagram, generate-image, rate-limit, post-template
+    42→
+    43→Work Log:
+    44→- src/lib/turnstile.ts: POST ke siteverify (timeout 10s); fail-open HANYA saat network error ke Cloudflare (rate limiter tetap jalan), fail-closed saat token ditolak eksplisit
+    45→- src/lib/cloudinary.ts: upload buffer PNG (data URI, folder fess-unair, tag temp) → { publicId, url }; deleteImage(publicId) diam-diam (cleanup tidak boleh menggagalkan submission)
+    46→- src/lib/instagram.ts: checkLimit (content_publishing_limit), createMediaContainer, publishMedia, getPermalink (best effort); graphFetch membungkus error Meta jadi InstagramError { fbCode, fbSubcode, fbType }
+    47→- src/lib/post-template.ts: SINGLE SOURCE OF TRUTH template kartu 1080×1080 (object node Satori) — dipakai Satori di server DAN PostPreview React di client via buildTemplateNode(text, fonts); font-size dinamis per tier panjang teks (84px→33px)
+    48→- src/lib/generate-image.ts: satori → SVG → sharp → PNG; font WOFF base64 dari fonts.generated.ts (tanpa dependency filesystem/CDN — aman lokal & Vercel)
+    49→- src/lib/rate-limit.ts: sliding window in-memory per IP + cooldown; getClientIp dari x-forwarded-for/x-real-ip
+    50→- FIX BUILD: serverExternalPackages: ["satori", "sharp", "cloudinary"] di next.config.ts — satori gagal load harfbuzzjs/hb.wasm saat dibundle Turbopack
+    51→
+    52→Stage Summary:
+    53→- Pipeline lengkap & modular; setiap failure mode punya kode error spesifik
+    54→- Template kartu terverifikasi visual untuk teks 21 char (84px) dan 522 char (33px) — keduanya terbaca jelas
+    55→
+    56→---
+    57→
+    58→Task ID: 4
+    59→Agent: main (Z.ai Code)
+    60→Task: Komponen — UI primitives, layout, menfess form
+    61→
+    62→Work Log:
+    63→- src/components/ui/button-variants.ts: cva variants dipisah dari Button ("use client") supaya bisa dipanggil di Server Components — FIX runtime "Attempted to call buttonVariants() from the server"
+    64→- src/components/ui/Button.tsx: button brand gaya sticker-zine (border tinta + hard shadow, hover lift, active press)
+    65→- src/components/ui/Alert.tsx: success/error/warning/info dengan ikon lucide, role=alert untuk error
+    66→- src/components/layout/Navbar.tsx: sticky, backdrop-blur, logo bintang kuning, link mono uppercase dengan active state kuning, menu mobile (fix lint: tanpa setState dalam effect, close via onClick)
+    67→- src/components/layout/Footer.tsx: mt-auto (sticky footer pattern), disclaimer bukan akun resmi, safe-area-inset-bottom
+    68→- src/components/menfess/: CharCounter (progress bar + warna bertahap), PostPreview (render node template ke React, skala via ResizeObserver — preview = hasil IG), TurnstileWidget (script explicit render; site key "placeholder_development" → mode dev token placeholder, tanpa bypass server), MenfessForm (state idle/submitting/success/error, honeypot, countdown rate limit, panel sukses dengan permalink, preview sticky kolom kanan), QuotaStatus (live fetch /api/check-limit untuk strip status kurir di landing)
+    69→
+    70→Stage Summary:
+    71→- Semua komponen satu tanggung jawab; preview client identik dengan output server
+    72→
+    73→---
+    74→
+    75→Task ID: 5
+    76→Agent: main (Z.ai Code)
+    77→Task: Halaman & tema visual
+    78→
+    79→Work Log:
+    80→- globals.css: palet brand (paper/ink/signal/tomato) masuk @theme + :root shadcn vars; utilitas bg-dotgrid, bg-tape, text-outline, marker-highlight; keyframes marquee/rise/pop; scrollbar tinta tipis; selection kuning
+    81→- layout.tsx: next/font/local (Space Grotesk 400/500/700 + Space Mono 400/700 dari src/assets/fonts), metadata lengkap (metadataBase, OG id_ID, twitter), Navbar+main flex-1+Footer
+    82→- app/icon.svg: kotak kuning rounded + bintang tinta
+    83→- page.tsx (landing): ticker marquee kuning (pause on hover), hero asimetris 7/5 dengan marker highlight & tumpukan kartu contoh (berlabel "CONTOH KARTU", bukan testimoni palsu), chip status kuota live, 3 langkah offset dengan numeral outline, section aturan kontras tinta, CTA band kuning
+    84→- /kirim: header + MenfessForm dua kolom
+    85→- /about, /privacy, /terms: copy Indonesia natural, honest, tanpa klaim palsu; disclaimer bukan akun resmi UNAIR; penomoran mono; tanggal update 10 Sep 2026
+    86→
+    87→Stage Summary:
+    88→- 5 halaman konsisten dengan navbar/footer; identitas visual orisinal (kertas×tinta×kuning, bukan gradient ungu-biru generik)
+    89→
+    90→---
+    91→
+    92→Task ID: 6
+    93→Agent: main (Z.ai Code)
+    94→Task: API routes
+    95→
+    96→Work Log:
+    97→- POST /api/submit (runtime nodejs, maxDuration 60): parse → honeypot (bot dibuang dengan respons sukses palsu) → validasi konten (trim, normalisasi \r\n, 2..500 char) → rate limit → verifikasi Turnstile → cek kuota IG (fail-open) → renderMenfessCard → dry-run? berhenti : upload Cloudinary → create container → publish → getPermalink → deleteImage; setiap failure punya kode + pesan spesifik Indonesia
+    98→- GET /api/check-limit: kembalikan { ok:true, quota } atau { ok:true, quota:null } saat IG gagal (status "tidak diketahui", bukan error)
+    99→- Hapus api/route.ts demo scaffold
+   100→
+   101→Stage Summary:
+   102→- Kontrak API selesai; pipeline resilient (cleanup Cloudinary best-effort di semua jalur gagal IG)
+   103→
+   104→---
+   105→
+   106→Task ID: 7
+   107→Agent: main (Z.ai Code)
+   108→Task: QA — lint, dev server, agent-browser end-to-end
+   109→
+   110→Work Log:
+   111→- Lint: 0 error 0 warning (setelah 3 fix: setState-in-effect Navbar, unused eslint-disable, buttonVariants server/client split)
+   112→- Semua route 200: /, /kirim, /about, /privacy, /terms, /api/check-limit
+   113→- Pipeline curl test: validasi teks pendek → 400 VALIDATION_ERROR dengan pesan spesifik; submit valid → { ok:true, dryRun:true } (409ms)
+   114→- Visual kartu Satori diverifikasi via scripts/render-preview.ts → /tmp/menfess-preview-{short,long}.png: layout rapi di kedua ekstrem
+   115→- Agent-browser: landing desktop (ticker, hero, kartu contoh, semua section render), form flow golden path (isi → preview live update → submit → panel sukses dry-run), rate limit (submit ke-3 → alert merah + countdown 19s, teks terjaga), hamburger menu mobile OK, mobile 390px landing & kirim OK, halaman legal OK
+   116→- Console/errors browser: bersih (hanya HMR + devtools info)
+   117→- Perbaikan kecil hasil QA: copy placeholder preview dibuat netral (tidak lagi "di sebelah kiri" yang salah konteks di mobile)
+   118→- Catatan infra: proses background antar-call tool dimatikan sandbox → buat scripts/dev-server.sh (guard idempotent) untuk menjaga server saat pengujian
+   119→- Catatan data: token IG yang diberikan user merespons "An unknown error has occurred" (code 1) dari sandbox → kemungkinan token expired ATAU graph.facebook.com diblokir sandbox. Sistem fail-open sesuai desain: submit tetap jalan, chip status menampilkan "nggak bisa dicek". Perlu dicek ulang di deploy Vercel dengan token fresh.
+   120→
+   121→Stage Summary:
+   122→- VERIFIED: seluruh golden path + error states bekerja; hanya tahap upload/posting IG yang tidak bisa diverifikasi dari sandbox (butuh jaringan & token valid, sedang dry-run=true)
+   123→
+   124→---
+   125→
+   126→Task ID: 8
+   127→Agent: main (Z.ai Code)
+   128→Task: Handover — worklog & cron webDevReview
+   129→
+   130→Work Log:
+   131→- Worklog ini ditulis lengkap per task ID
+   132→- Cron job dibuat: webDevReview tiap 15 menit (lihat daftar cron)
+   133→
+   134→Stage Summary:
+   135→- Project v1.0 COMPLETE & browser-verified
+   136→- LANGKAH PRODUKSI (untuk owner): set MENFESS_DRY_RUN=false, isi NEXT_PUBLIC_TURNSTILE_SITE_KEY asli (0x...), pastikan IG_ACCESS_TOKEN fresh & valid, deploy Vercel + env vars sama
+   137→- Ide pengembangan berikutnya: arsip menfess + database, moderasi opsional (queue), custom domain, multi-universitas (constants → konfigurasi per-brand)
+   138→
+   139→---
+   140→
+   141→Task ID: 9
+   142→Agent: main (Z.ai Code)
+   143→Task: QA round + fitur baru — mode gelap, draf otomatis, share/salin, pencarian arsip
+   144→
+   145→Work Log:
+   146→- ASSESSMENT: proyek stabil (v1.0 + fitur arsip dari cron reviewer sebelumnya yang belum tercatat di worklog: /arsip, ArchiveGrid, api/arsip, listRecentMedia, not-found, error.tsx, sitemap.ts, text-sizing.ts). QA agent-browser: landing, /kirim (golden path dry-run OK), /arsip (empty state degrade OK), semua route 200. Fix 1 lint warning (unused eslint-disable di ArchiveGrid).
+   147→- MODE GELAP (fitur terbesar ronde ini):
+   148→  - globals.css ditulis ulang: semua warna brand jadi CSS variable (—paper, —ink, —signal, dst.) yang direferensi @theme inline → blok .dark cukup menukar nilai. Tema gelap "tinta malam": kertas #14110d, kartu #201a14, teks krem #efe8da, kuning signal TETAP #ffc800.
+   149→  - Token baru: --ink-fixed (tinta selalu gelap, dipakai di atas permukaan kuning), --inverse/--inverse-fg (footer & section aturan: tinta di terang, lebih gelap dari latar di gelap — tidak menyilaukan), --hard-strong/--hard-soft (bayangan sticker via var → menggantikan semua rgba(22,19,16,…) hardcoded), --focus-ring.
+   150→  - Utilitas dapat varian gelap: .bg-dotgrid, .text-outline, .marker-highlight (teks dipaksa tinta gelap di atas marker kuning), scrollbar, ::selection, kbd-chip (baru), color-scheme.
+   151→  - A11y: ring fokus global 3px (ink di terang, kuning di gelap), prefers-reduced-motion mematikan marquee/pop/rise.
+   152→  - ThemeProvider (next-themes, attribute=class, defaultTheme=system) dibungkus di layout; viewport themeColor dua media query.
+   153→  - ThemeToggle di navbar (desktop + mobile, ikon Sun/Moon transisi rotasi, hydration-safe via useSyncExternalStore bukan setState-in-effect).
+   154→  - Perbaikan kontras hasil QA visual: heading CTA band + ticker (bg kuning) pakai text-ink-fixed; asterisk ticker #c23f1b fixed; chip nav aktif text-ink-fixed; Alert success/error varian dark; TurnstileWidget ikut tema (theme param + re-render saat ganti tema) + varian dark untuk box scriptFailed.
+   155→- FORM /kirim:
+   156→  - Draf auto-save ke localStorage (key fess-unair:menfess-draft:v1, debounce 400ms) + banner pulihkan/hapus saat kembali dengan form kosong; draf dihapus saat submit sukses. Label "Draf auto-tersimpan" di bar bawah textarea.
+   157→  - Shortcut Ctrl/⌘+Enter kirim (requestSubmit) + hint kbd-chip.
+   158→  - Panel sukses: tombol "Bagikan kabar ini" (Web Share API, fallback salin) + "Salin tautan" (clipboard, feedback jadi "Tersalin"). Klaim di error.tsx soal teks tersisa kini benar-benar akurat lintas sesi.
+   159→- ARSIP: pencarian klien-samping (filter caption case-insensitive di post termuat) + empty state "nggak ada yang cocok" + tombol bersihkan; hover shadow via var.
+   160→- LINT FIX (Next 16 rule react-hooks/set-state-in-effect): Navbar mounted pattern → useSyncExternalStore; baca localStorage draf → setTimeout(0). SATU BUG SELAMA PENGERJAAN: useState terlanjur dihapus dari import Navbar → runtime error "useState is not defined", langsung diperbaiki & diverifikasi.
+   161→- QA agent-browser lengkap: dark landing (hero/ticker/aturan/CTA/footer), light landing utuh, dark kirim + banner draf + pulihkan + submit sukses + salin tautan ("Tersalin"), dark arsip & about, mobile 390px dark OK, toggle bolak-balik light↔dark tersimpan, semua route 200 (404 page benar), lint 0/0. Sisa dev.log hanya error IG token lama (known issue, fail-open).
+   162→
+   163→Stage Summary:
+   164→- VERIFIED: mode gelap penuh (brand zine terjaga: kuning signal selalu berpasangan tinta gelap), draf otomatis, shortcut, share/salin, pencarian arsip — semua lolos QA di kedua tema + mobile.
+   165→- Keputusan penting: kartu IG (PostPreview/Satori) SENGAJA tetap terang di tema gelap = identik dengan hasil postingan asli.
+   166→- Risiko/known issue (tetap): token IG "unknown error" dari sandbox (expired atau graph.facebook.com diblokir) → chip kuota & arsip degrade gracefully; verifikasi ulang di Vercel dengan token fresh. Draf menfess tersimpan plaintext di localStorage (hanya teks anonim, tanpa identitas — risiko rendah, disebut di banner).
+   167→- Ide ronde berikutnya: tombol "bagikan" per-kartu arsip, toast global (sonner) untuk feedback salin, riwayat kiriman lokal ("Kiriman kamu"), lint defaultTheme=system vs light di landing, verifikasi Turnstile asli + MENFESS_DRY_RUN=false saat produksi.
+   168→
+   169→---
+   170→
+   171→Task ID: 10
+   172→Agent: main (Z.ai Code)
+   173→Task: QA round + fitur baru — toast global, "Kiriman kamu", arsip upgrade, FAQ, manifest & OG image
+   174→
+   175→Work Log:
+   176→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, error lama Navbar sudah hilang dari dev.log). QA agent-browser awal: landing/kirim/arsip aman → lanjut fitur, bukan bugfix besar.
+   177→- TOAST GLOBAL (sonner): sonner.tsx distyling ulang gaya sticker-zine (kartu kertas, border tinta, hard shadow 5px, font brand; var --normal-* dari CSS vars → ikut tema otomatis). <Toaster position="bottom-center" offset={20}/> di layout.tsx. Dipakai untuk: fallback share (info), clipboard gagal (error), hapus riwayat (sukses).
+   178→- "KIRIMAN KAMU" (fitur utama ronde ini): riwayat kiriman sukses di localStorage (key fess-unair:submissions:v1, maks 10) — lib baru src/lib/submission-history.ts (list/save/clear + event). Komponen SubmissionHistory di /kirim di bawah form: chip status (Tayang / Uji coba dry-run), waktu relatif (date-fns id), cuplikan teks, link post, tombol hapus + toast, catatan privasi. MenfessForm memanggil saveSubmission saat ok:true lalu dispatch event SUBMISSION_SAVED_EVENT agar panel langsung muncul tanpa reload.
+   179→  - BUG DITEMUKAN & DIPERBAIKI saat QA: panel lama hanya membaca localStorage di mount → setelah submit, panel tidak muncul sampai reload. Fix via CustomEvent; terverifikasi langsung muncul ("Kiriman kamu 2").
+   180→- ARSIP UPGRADE: MAX_ITEMS 12→24; per-kartu tombol "Bagikan" (Web Share API → fallback clipboard + toast sukses; clipboard diblokir → toast error spesifik, tidak lagi diam); waktu relatif ("12 menit yang lalu") dengan tanggal eksak sebagai title; pagination "Muat lebih banyak" 9/klik (pencarian tetap menyaring SEMUA post yang dimuat, bukan hanya halaman terlihat); input cari dapat focus ring brand; badge "BUKA IG" muncul saat hover gambar.
+   181→- FAQ di landing: section baru #faq sebelum CTA — 6 pertanyaan nyata (anonimitas, kecepatan tayang, batas kirim, penyimpanan data, gagal kirim, bukan akun resmi) + JSON-LD FAQPage untuk rich results Google. Accordion shadcn distyling ulang: kartu border tinta, nomor mono tomat, shadow menguat saat terbuka.
+   182→- PWA & OG: manifest.ts (nama, warna brand krem/kuning, icon /icon.svg — icon dikopi dari app ke public). opengraph-image.tsx baru: OG 1200×630 via next/og ImageResponse dengan font Space Grotesk/Mono yang sama dengan generator kartu (fonts.generated.ts, decode base64) — hasil PNG diverifikasi visual (bingkai tinta, heading marker kuning, kartu contoh miring, chip @fess_unair). Twitter card naik ke summary_large_image.
+   183→- DETAIL STYLING: scroll-smooth di html (dengan override prefers-reduced-motion yang sudah ada), fokus ring kuning di input cari arsip, hover badge kartu, toast konsisten dua tema.
+   184→- QA agent-browser lengkap: landing light+dark (desktop & 390px), FAQ buka-tutup di kedua tema + mobile, golden path submit (dry-run OK), riwayat muncul live + persist + hapus + toast, salin tautan ("Tautan tersalin"), arsip dengan 1 POST ASLI dari IG (token kini jalan untuk /media!), cari match & empty state, share button + error toast di headless (clipboard diblokir), 404, manifest, sitemap. Lint akhir 0 error 0 warning. Semua route 200.
+   185→- DIAGNOSIS BARU soal token IG: /media BERHASIL diakses dari sandbox (arsip menampilkan post asli) tapi content_publishing_limit tetap balas "An unknown error has occurred" (code 1, OAuthException) — terkonfirmasi via curl langsung ke graph.facebook.com. Artinya: BUKAN sandbox yang memblokir; token ini kemungkinan besar tidak punya permission instagram_business_content_publishing, atau akun belum professional. Fail-open bekerja sesuai desain (submit tetap jalan, chip "nggak bisa dicek").
+   186→
+   187→Stage Summary:
+   188→- VERIFIED: toast global, riwayat "Kiriman kamu" (dengan bug live-update terfix), arsip baru (share/relative time/pagination/search), FAQ + JSON-LD, manifest PWA, OG image brand — semua lolos QA light/dark desktop & mobile.
+   189→- Pipeline /media terbukti end-to-end hidup dari sandbox: arsip menampilkan postingan IG asli (post uji "Tes sistem kedua"). Yang belum terverifikasi: posting otomatis baru (dry-run masih true) & content_publishing_limit (butuh token dengan permission content publishing).
+   190→- Risiko/known issue: content_publishing_limit gagal dengan code 1 dari Meta meski token valid untuk /media → minta owner regenerate token dengan scope instagram_business_content_publishing. MENFESS_DRY_RUN masih true (disengaja untuk QA).
+   191→- Ide ronde berikutnya: halaman arsip pakai pagination server-side (after-cursor Graph API) bila post >24; statistik nyata (jumlah post) di landing jika kuota aman; preview kartu juga di riwayat kiriman; i18n struktur konstanta per-universitas (multi-brand).
+   192→
+   193→---
+   194→
+   195→Task ID: 11
+   196→Agent: main (Z.ai Code)
+   197→Task: QA round + fitur baru — halaman kartu /fess/[id], statistik live, RSS feed, mini-preview riwayat
+   198→
+   199→Work Log:
+   200→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, error tunggal di dev.log hanya content_publishing_limit yang fail-open). QA agent-browser awal: landing/arsip/kirim aman → lanjut fitur baru.
+   201→- HALAMAN KARTU /fess/[id] (fitur utama ronde ini — "permalink lokal" per menfess):
+   202→  - src/app/fess/[id]/page.tsx: server component, fetch satu media via getMediaCached; render PostPreview (template identik dgn kartu IG) + panel metadata (tanggal WIB, @fess_unair, badge Anonim, blockquote teks lengkap) + CTA tulis menfess. Post tidak ada / API gagal → notFound() (404 terverifikasi /fess/bogus12345).
+   203→  - generateMetadata: judul = kutipan menfess (potong di batas kata), robots noindex utk kartu tanpa teks, canonical.
+   204→  - opengraph-image.tsx per kartu: OG 1200×630 dgn teks menfess asli (font Space Grotesk/Mono sama dgn generator kartu), tier font berdasar panjang teks; fallback OG brand kuning "* Fess UNAIR" jika post hilang/API gagal — tidak pernah 500.
+   205→  - Komponen MenfessActions (client): "Bagikan kartu" (Web Share API → fallback clipboard + toast info) & "Salin tautan" — URL lokal /fess/[id], bukan IG.
+   206→  - lib/media-lookup.ts: cache in-memory lookup per-ID (positif 10 mnt, negatif 60 dtk anti brute-force ID, max 100 entri) — dipakai page + OG route sekaligus (1 panggilan Graph per kunjungan).
+   207→- INSTAGRAM LIB: getMediaById (validasi format ID regex utk keamanan path) + getTotalMediaCount (field media_count — TERBUKTI JALAN dgn token sekarang, beda dgn content_publishing_limit!).
+   208→- lib/caption.ts (baru): extractMenfessText dgn 2 marker boilerplate (format sekarang "Kirim menfess kamu juga lewat…" + format lama "— terkirim anonim melalui…") + bersihkan baris hashtag ekor; excerptOfText potong di batas kata. ArchiveGrid & SubmissionHistory kini pakai util bersama (hapus duplikasi).
+   209→- STATISTIK LIVE LANDING: api/stats/route.ts (media_count, cache 5 mnt, fail-open posts:null) + komponen LiveStats — strip "Sudah N menfess tayang · Lihat arsip →" di bawah chip kuota; disembunyikan jika angka tak bisa dicek (jujur, bukan angka karangan). Terverifikasi tampil dgn angka nyata (1).
+   210→- RSS FEED /feed.xml: RSS 2.0, 20 post terakhir, link ke halaman kartu lokal, fail-open = channel kosong valid (bukan 500); link di footer + autodiscovery <link rel="alternate" type="application/rss+xml"> via metadata alternates.types. Terverifikasi valid & berisi post asli.
+   211→- ARSIP: kartu kini link INTERNAL ke /fess/[id] (badge hover "Lihat kartu" + link "Halaman kartu"; "Buka di IG" tetap ada sbg link eksternal; focus-visible inset ring + focus-within shadow utk keyboard). Tombol Bagikan kini membagikan URL lokal (OG image ikut tampil di chat).
+   212→- RIWAYAT KIRIMAN: mini-preview kartu (w-16) per baris — pratinjau stempel persis kartu IG.
+   213→- BUG DITEMUKAN & DIPERBAIKI:
+   214→  1. Mini preview SubmissionHistory melebar full-row (PostPreview root w-full menang atas w-16 yang dilewatkan via className → teks per baris rusak). Fix: bungkus dgn div w-16 fixed (PostPreview w-full dalam wrapper).
+   215→  2. Boilerplate format lama ikut tampil di halaman kartu/OG/feed (marker baru belum ada). Fix: lib/caption.ts multi-marker + strip hashtag ekor.
+   216→  3. Turbopack module graph stale utk route opengraph-image (caption.ts sudah berubah tapi OG masih render kode lama; page & feed sudah benar). Fix: restart dev server (scripts/dev-server.sh idempotent). Dicatat: kalau edit lib yang dipakai metadata route, cek juga OG-nya.
+   217→- QA agent-browser lengkap: detail page light (kartu+metadata+aksi+CTA), dark (kartu sengaja tetap terang = identik IG; panel metadata kontras OK), mobile 390px (semua stack rapi), arsip → klik kartu → URL /fess/[id] benar, tombol "Salin tautan" → jadi "TERSALIN", submit dry-run → panel sukses + "Kiriman kamu" mini-preview muncul, feed.xml valid, /api/stats posts:1, OG image visual OK, semua route 200, lint akhir 0/0.
+   218→- Detail styling: badge hover arsip kini inline-flex + ikon mata, focus ring inset pada link kartu, blockquote kuning di detail, CTA dashed panel, footer +RSS.
+   219→
+   220→Stage Summary:
+   221→- VERIFIED: halaman kartu /fess/[id] end-to-end (data nyata dari IG), OG image per kartu, statistik live nyata (media_count), RSS, mini-preview riwayat — semua lolos QA light/dark desktop & mobile.
+   222→- Keputusan penting: share arsip kini membagikan URL situs lokal (bukan IG) supaya OG image kartu ikut tampil; kartu tanpa teks → noindex.
+   223→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja). media_count & /media TERBUKTI jalan dgn token sekarang.
+   224→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; halaman "acah"/random kartu; multi-brand constants; cache-header/ISR utk /fess/[id]; regenerasi token IG + DRY_RUN=false saat produksi.
+   225→
+   226→---
+   227→
+   228→Task ID: 12
+   229→Agent: main (Z.ai Code)
+   230→Task: QA round + fitur baru — halaman /acak (kocok kartu), like counts end-to-end, cache bersama, polish zine
+   231→
+   232→Work Log:
+   233→- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, console bersih, hanya content_publishing_limit fail-open yang known). QA agent-browser awal: landing/kirim/arsip aman → lanjut fitur baru.
+   234→- MEDIA POOL BERSAMA (refactor arsitektur): lib baru src/lib/media-pool.ts — SATU cache in-memory daftar 50 post terakhir (TTL 5 menit + anti thundering-herd via inflight guard + stale fallback) yang melayani /api/arsip, /api/acak, /api/stats, dan /feed.xml sekaligus. Dulu tiap route punya cache sendiri (boros kuota Graph); kini 1x fetch per 5 menit. getArsipItems / pickRandomMedia(excludeId) / getRecentLikesTotal. feed.xml refactor ke pool.
+   235→- HALAMAN /ACAK "KOCOK KARTU" (fitur utama ronde ini):
+   236→  - API GET /api/acak: pilih 1 post acak dari pool, param ?exclude=<id> biar kartu yang sama nggak muncul 2x berturut-turut (kalau masih ada kandidat lain), Cache-Control no-store (hasilnya memang harus beda tiap request), fail-open 200 {item:null, reason}.
+   237→  - Halaman /acak (server, metadata noindex): heading "Kocok. Baca. Kaget." + RandomFess client component.
+   238→  - RandomFess: deck 3 kartu (2 kartu "gacoan" di belakang ikut miring saat spinning), kartu utama = gambar asli IG (fallback PostPreview kalau mediaUrl kosong), label "ACAK" nempel di tepi atas kartu (posisi -top-3 — BUG DITEMUKAN: awalnya top-4 di dalam kartu, menutupi header brand kartu IG), baris meta (♥ suka + waktu relatif + Halaman kartu + Bagikan + link IG), tombol KOCOK signal besar dengan spinner, shortcut keyboard K (diabaikan kalau lagi ngetik di input/modifier), jeda minimal 500ms biar animasi kocok terasa, guard spinningRef anti double-request, state degrade: empty ("kirim yang pertama, yuk") vs unavailable ("arsip lagi nggak bisa dijangkau") + alert + retry.
+   239→  - Entrypoints: navbar (desktop+mobile) link "Acak", tombol "Kartu acak" di bar kontrol arsip, link "Kartu acak" di footer. /acak sengaja noindex (kartu individual tetap terindeks via /fess/[id]).
+   240→- LIKE COUNTS END-TO-END (data nyata dari IG, honest — undefined = tampil sebagai tidak ada, bukan nol karangan):
+   241→  - instagram.ts: fields += like_count, normalisasi toLikeCount (negatif/aneh → undefined); listRecentMedia & getMediaById sama-sama mengembalikan likeCount.
+   242→  - ArchiveGrid: chip ♥ tomat (tabular-nums, title tooltip) di baris meta kartu; SORT TOGGLE baru "Terbaru | Paling disukai" (segmented mono, aria-pressed, hanya muncul kalau minimal 1 item punya data suka; sort via useMemo, tie-break terbaru); responsif: search full-width di mobile, toggle di baris sendiri.
+   243→  - /fess/[id]: "♥ n suka" di panel metadata (bold tomat).
+   244→  - /api/stats: + likes (jumlah suka pool via getRecentLikesTotal — undefined kalau 1 pun item tak punya data); LiveStats: "♥ n suka di post terbaru" dipisah divider tipis, hidden kalau tak tersedia.
+   245→- MENFESSACTIONS: tombol ketiga "Salin teks" (ikon Quote) — salin teks menfess ke clipboard, feedback "TEKS TERSALIN" + error toast spesifik kalau clipboard diblokir (semua path punya pesan, tidak ada yang diam).
+   246→- CACHE HEADERS CDN: /api/arsip & /api/stats → public, s-maxage=180, stale-while-revalidate=600 (respons sukses/cache-lama); no-store saat data kosong; /api/acak no-store; /feed.xml sudah ada dari ronde lalu.
+   247→- STYLING DETAILS (mandat polish):
+   248→  - Grain overlay zine: .grain-overlay fixed inset-0 z-90 pointer-events-none, SVG feTurbulence desaturasi tile 160px, opacity 0.05 terang / 0.07 gelap, hidden kalau prefers-reduced-motion — dipasang di layout (setelah Footer, sebelum Toaster).
+   249→  - Scroll reveal: util .reveal/.is-visible (opacity+translateY, delay via --reveal-delay, force-visible di reduced-motion) + komponen Reveal (client) dengan pola aman: SSR/no-JS/reduced-motion → langsung terlihat; elemen di bawah viewport disembunyikan HANYA setelah mount (rAF, hindari set-state-in-effect lint) lalu dimunculkan sekali via IntersectionObserver; elemen yang sudah kelihatan tidak pernah berkedip; className wrapper tetap digabung (cn). Dipasang di 3 section landing (cara-kerja, aturan, FAQ).
+   250→  - Logo navbar: bintang hover rotate 120° (simetri tiga batang — "mendarat" ke bentuk sama), 500ms ease-out.
+   251→  - Keyframe .animate-shuffle (jitter rotasi/translate 0.5s) untuk kartu saat dikocok; didaftarkan sebagai --animate-shuffle di @theme.
+   252→- BUG QA & FIX: (1) badge ACAK menutupi header kartu → dipindah ke tepi atas kartu; overflow-hidden article melar -> badge jadi sibling di container deck. (2) ArchiveGrid search input gepeng di 390px → flex-col mobile / sm:flex-row. (3) [Catatan proses, bukan bug app] klik native agent-browser pada tombol submit di tepi bawah viewport mobile tidak mendarat — klik via eval JS membuktikan pipeline submit normal (POST 200 + panel sukses + riwayat).
+   253→- QA agent-browser lengkap: /acak light+dark desktop & 390px (deck, badge, meta, KOCOK, hint kbd, shortcut K jalan), sort toggle klik → "PALING DISUKAI" aktif, chip ♥ muncul di kartu arsip & /fess/[id] & LiveStats landing, Salin teks → "TEKS TERSALIN", golden path /kirim mobile dark (submit → panel sukses + Kiriman kamu muncul), grain + reveal tidak mengganggu keterbacaan, semua section landing terlihat setelah scroll (tidak ada kontene stuck-hidden), headers cache terverifikasi via curl, semua route 200 + 404 benar, lint akhir 0 error 0 warning. dev.log bersih (hanya known issue kuota IG).
+   254→
+   255→Stage Summary:
+   256→- VERIFIED: halaman /acak end-to-end (data IG nyata), like counts di 4 permukaan (arsip/sort/kartu/landing), cache pool bersama menghemat kuota Graph, CDN cache headers, grain zine + scroll reveal + micro-interactions — semua lolos QA light/dark desktop & mobile.
+   257→- Keputusan penting: /acak noindex & no-store; sort "paling disukai" hanya muncul saat data suka ada (jujur, bukan fitur mati); likes undefined tidak pernah ditampilkan sebagai 0 karangan (kecuali IG benar-benar melapor 0).
+   258→- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dengan token fresh; MENFESS_DRY_RUN masih true (disengaja untuk QA). Reveal bergantung JS — tanpa JS konten langsung tampil normal (by design).
+   259→- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; simpan riwayat kiriman ke database (Prisma) untuk statistik agregat; share card sebagai gambar (canvas → PNG); multi-brand constants; regenerasi token IG + DRY_RUN=false saat produksi.
+   260→

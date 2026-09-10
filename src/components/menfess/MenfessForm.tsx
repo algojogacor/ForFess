@@ -481,6 +481,45 @@ export function MenfessForm() {
           Ukuran huruf menyesuaikan panjang teks, dari satu kata sampai 500
           karakter tetap kebaca di HP.
         </p>
+
+        {/* Tips nulis — mengisi ruang kosong di kolom pratinjau & bermanfaat beneran */}
+        <aside
+          aria-label="Tips menulis menfess"
+          className="mt-3 rounded-2xl border-2 border-dashed border-ink/30 bg-signal-soft/40 p-5"
+        >
+          <p className="flex items-center gap-2 font-mono text-[12px] font-bold uppercase tracking-[0.2em] text-ink-soft">
+            <span aria-hidden className="text-tomato-deep">*</span>
+            Biar kartunya enak dibaca
+          </p>
+          <ol className="mt-3 flex flex-col gap-3">
+            {[
+              {
+                t: "Tulis kayak ngobrol",
+                d: "Teks yang mengalir selalu lebih relate daripada yang dibikin-bikin formal.",
+              },
+              {
+                t: "Satu cerita per menfess",
+                d: "Kartunya fokus, pembacanya nggak kehilangan alur di tengah jalan.",
+              },
+              {
+                t: "Jangan sebut nama orang",
+                d: "Anonim ini untuk semua pihak — termasuk orang yang kamu ceritakan.",
+              },
+            ].map((tip, i) => (
+              <li key={tip.t} className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md border-2 border-ink bg-paper-raised font-mono text-[11px] font-bold"
+                >
+                  {i + 1}
+                </span>
+                <p className="text-[13px] leading-relaxed text-ink-soft">
+                  <span className="font-bold text-ink">{tip.t}.</span> {tip.d}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </aside>
       </aside>
     </div>
   );

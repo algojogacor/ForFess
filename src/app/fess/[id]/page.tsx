@@ -17,6 +17,7 @@ import { id as localeId } from "date-fns/locale";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { MenfessActions } from "@/components/menfess/MenfessActions";
+import { ReactionBar } from "@/components/menfess/ReactionBar";
 import { getMediaCached } from "@/lib/media-lookup";
 import { InstagramError } from "@/lib/instagram";
 import { extractMenfessText, excerptOfText } from "@/lib/caption";
@@ -158,6 +159,9 @@ export default async function FessDetailPage({ params }: PageProps) {
                 {text}
               </blockquote>
             ) : null}
+
+            {/* ==== Reaksi pembaca (data nyata dari database situs) ==== */}
+            <ReactionBar fessId={id} />
 
             {/* ==== Aksi: bagikan lokal / buka IG ==== */}
             <div className="mt-5 flex flex-wrap items-center gap-3 border-t-2 border-dashed border-ink/15 pt-5">

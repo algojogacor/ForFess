@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Link2, Quote, Share2 } from "lucide-react";
+import { Check, Download, Link2, Loader2, Quote, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { SITE_URL } from "@/constants";
 
 /**
  * Tombol aksi di halaman /fess/[id]: bagikan (Web Share API dengan
- * fallback clipboard), salin tautan, dan salin teks menfessnya.
+ * fallback clipboard), salin tautan, salin teks menfessnya, dan unduh
+ * gambar kartunya (1200×630, dibuat server dari teks asli).
  * Semua feedback pakai state tombol + toast — tidak ada yang diam.
  */
 export function MenfessActions({ fessId, text }: { fessId: string; text: string }) {
@@ -19,6 +20,7 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
   const [shared, setShared] = useState(false);
   const [copied, setCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const copyToClipboard = async (value: string) => {
     try {
@@ -67,6 +69,41 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
         description:
           "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
       });
+    }
+  };
+
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      // Gambar kartu dibuat server (route opengraph-image — mesin yang
+      // sama dengan generator kartu, jadi hasilnya konsisten).
+      const res = await fetch(`/fess/${fessId}/opengraph-image`);
+      if (!res.ok) {
+        throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fess-unair-${fessId}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Gambar kartu terunduh", {
+        description: "Cek folder unduhan — siap dipasang story atau dikirim ke chat.",
+      });
+    } catch (err) {
+      const status = err instanceof Error && "status" in err ? (err as { status?: number }).status : undefined;
+      toast.error("Gagal mengunduh gambar", {
+        description:
+          status === 404
+            ? "Gambar kartu ini nggak ditemukan. Mungkin kartunya sudah tidak tersedia di Instagram."
+            : "Server nggak bisa menyiapkan gambarnya sekarang. Coba lagi sebentar, ya.",
+      });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -140,6 +177,25 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
           )}
         </button>
       ) : null}
+      <button
+        type="button"
+        onClick={() => void handleDownload()}
+        disabled={downloading}
+        aria-label="Unduh gambar kartu menfess ini"
+        className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3.5 py-2 text-[13px] font-bold uppercase tracking-wide transition-colors hover:bg-signal-soft disabled:cursor-wait disabled:opacity-60"
+      >
+        {downloading ? (
+          <>
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Menyiapkan…
+          </>
+        ) : (
+          <>
+            <Download className="size-4" aria-hidden />
+            Unduh gambar
+          </>
+        )}
+      </button>
     </>
   );
 }

@@ -64,3 +64,37 @@ export const IMAGE_FONT_TIERS: Array<{ maxLen: number; size: number }> = [
   { maxLen: 400, size: 38 },
   { maxLen: Number.MAX_SAFE_INTEGER, size: 33 },
 ];
+
+/* == Reaksi pembaca (disimpan di SQLite via Prisma) == */
+
+/** Definisi reaksi yang tersedia — satu-satunya sumber kebenaran. */
+export const REACTIONS = [
+  { kind: "relate", emoji: "🫶", label: "Relate" },
+  { kind: "lucu", emoji: "😂", label: "Lucu" },
+  { kind: "sedih", emoji: "🥲", label: "Ikut sedih" },
+  { kind: "semangat", emoji: "🔥", label: "Semangat" },
+] as const;
+
+export type ReactionKind = (typeof REACTIONS)[number]["kind"];
+
+/** Daftar kind yang valid (untuk validasi di API). */
+export const REACTION_KINDS: readonly string[] = REACTIONS.map((r) => r.kind);
+
+/** Batas ID media IG yang dianggap wajar (regex validasi di API). */
+export const REACTION_MAX_IDS = 50;
+
+/** Format ID media IG yang diterima API reaksi. */
+export const REACTION_ID_PATTERN = /^[0-9]{5,25}$/;
+
+/**
+ * Rate limit khusus reaksi — jauh lebih longgar dari submit karena
+ * klik reaksi itu ringan; tetap ada agar tidak bisa flood database.
+ */
+export const REACTION_RATE_LIMIT = {
+  /** Jeda minimum antar klik reaksi dari IP yang sama (detik). */
+  COOLDOWN_SECONDS: 2,
+  /** Maksimum reaksi per IP dalam window. */
+  MAX_PER_WINDOW: 30,
+  /** Window rate limit reaksi (milidetik) — 10 menit. */
+  WINDOW_MS: 10 * 60 * 1000,
+} as const;

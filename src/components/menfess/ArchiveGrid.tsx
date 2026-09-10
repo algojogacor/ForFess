@@ -20,13 +20,33 @@ import {
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { IG_HANDLE, IG_PROFILE_URL, SITE_URL } from "@/constants";
+import { IG_HANDLE, IG_PROFILE_URL, REACTIONS, SITE_URL } from "@/constants";
 import type { ArchiveItem, ArchiveResponse, ArchiveSource } from "@/types/menfess";
 import { excerptFromCaption } from "@/lib/caption";
 import { cn } from "@/lib/utils";
 
 /** Jumlah kartu per "halaman" tombol Muat lebih banyak. */
 const PAGE_SIZE = 9;
+
+/** Chip reaksi pembaca di meta kartu — emoji terbanyak + jumlah total. */
+interface ReactionChip {
+  emoji: string;
+  label: string;
+  total: number;
+}
+
+/** Dari hitungan per-kind, ambil reaksi dominan buat chip kartu. */
+function dominantReaction(counts: { total: number } & Partial<Record<string, number>>): ReactionChip | null {
+  let best: { emoji: string; label: string; n: number } | null = null;
+  for (const r of REACTIONS) {
+    const n = counts[r.kind];
+    if (typeof n === "number" && n > 0 && (!best || n > best.n)) {
+      best = { emoji: r.emoji, label: r.label, n };
+    }
+  }
+  if (!best) return null;
+  return { emoji: best.emoji, label: best.label, total: counts.total };
+}
 
 function formatDate(timestamp: string | undefined): string {
   if (!timestamp) return "";
@@ -72,7 +92,7 @@ async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared"
   return "copied";
 }
 
-function ItemCard({ item }: { item: ArchiveItem }) {
+function ItemCard({ item, reaction }: { item: ArchiveItem; reaction?: ReactionChip }) {
   const excerpt = excerptFromCaption(item.caption, 160);
   const date = formatDate(item.timestamp);
   const relative = relativeTime(item.timestamp);
@@ -133,6 +153,15 @@ function ItemCard({ item }: { item: ArchiveItem }) {
             >
               <Heart className="size-3 fill-current" aria-hidden />
               {item.likeCount}
+            </span>
+          ) : null}
+          {reaction ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-ink/25 bg-signal-soft/60 px-1.5 py-px font-bold tabular-nums text-ink"
+              title={`${reaction.total} reaksi pembaca di situs ini (terbanyak: ${reaction.label})`}
+            >
+              <span aria-hidden className="text-[11px] leading-none">{reaction.emoji}</span>
+              {reaction.total}
             </span>
           ) : null}
           {relative ? <span title={date}>{relative}</span> : date ? <span>{date}</span> : "Tanpa tanggal"}
@@ -219,17 +248,39 @@ export function ArchiveGrid() {
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  /** Urutan tampil: "recent" = terbaru dulu, "likes" = paling disukai dulu. */
-  const [sort, setSort] = useState<"recent" | "likes">("recent");
+  /** Urutan tampil: "recent" | "likes" (suka IG) | "reaksi" (pembaca situs). */
+  const [sort, setSort] = useState<"recent" | "likes" | "reaksi">("recent");
+  /** Hitungan reaksi pembaca (database situs) untuk post yang dimuat. */
+  const [reactionMap, setReactionMap] = useState<Record<string, { total: number } & Partial<Record<string, number>>>>({});
 
   const load = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
     try {
       const res = await fetch("/api/arsip", { cache: "no-store" });
       const data = (await res.json()) as ArchiveResponse;
-      setItems(data.items ?? []);
+      const loaded = data.items ?? [];
+      setItems(loaded);
       setSource(data.source);
       setFetchTime(data.fetchedAt);
+
+      // Sekalian tarik hitungan reaksi pembaca untuk post yang dimuat
+      // (maks 50 id — sesuai batas endpoint /api/reaksi).
+      if (loaded.length > 0) {
+        try {
+          const ids = loaded.slice(0, 50).map((m) => m.id).join(",");
+          const rres = await fetch(`/api/reaksi?ids=${encodeURIComponent(ids)}`);
+          if (rres.ok) {
+            const rdata = (await rres.json()) as {
+              counts?: Record<string, { total: number } & Partial<Record<string, number>>>;
+            };
+            setTimeout(() => setReactionMap(rdata.counts ?? {}), 0);
+          }
+        } catch {
+          // Reaksi adalah bonus — arsip tetap tampil tanpa chip reaksi.
+        }
+      } else {
+        setTimeout(() => setReactionMap({}), 0);
+      }
     } catch {
       // Jaringan gagal total — tampilkan empty state, jangan error keras.
       setItems([]);
@@ -247,20 +298,43 @@ export function ArchiveGrid() {
   // Urutkan SEKALI setiap items/sort berubah — bukan di dalam render.
   const sortedItems = useMemo(() => {
     if (!items) return null;
-    if (sort !== "likes") return items;
+    if (sort === "recent") return items;
+    if (sort === "reaksi") {
+      return [...items].sort((a, b) => {
+        const diff = (reactionMap[b.id]?.total ?? 0) - (reactionMap[a.id]?.total ?? 0);
+        if (diff !== 0) return diff;
+        // Seri? Yang lebih baru menang.
+        return new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime();
+      });
+    }
     return [...items].sort((a, b) => {
       const likeDiff = (b.likeCount ?? -1) - (a.likeCount ?? -1);
       if (likeDiff !== 0) return likeDiff;
       // Seri? Yang lebih baru menang.
       return new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime();
     });
-  }, [items, sort]);
+  }, [items, sort, reactionMap]);
 
-  // Menu urut cuma muncul kalau data sukanya benar-benar ada —
-  // jangan menawarkan "paling disukai" lalu mengurutkan kosong.
+  // Menu urut cuma muncul kalau datanya benar-benar ada —
+  // jangan menawarkan pilihan urutan lalu mengurutkan kosong.
   const hasLikeData = useMemo(
     () => (items ?? []).some((m) => typeof m.likeCount === "number"),
     [items]
+  );
+  const hasReactionData = useMemo(
+    () => (items ?? []).some((m) => (reactionMap[m.id]?.total ?? 0) > 0),
+    [items, reactionMap]
+  );
+  const sortOptions = useMemo(
+    () =>
+      (
+        [
+          { value: "recent", label: "Terbaru" },
+          ...(hasLikeData ? [{ value: "likes" as const, label: "Paling disukai" }] : []),
+          ...(hasReactionData ? [{ value: "reaksi" as const, label: "Paling direaksi" }] : []),
+        ] as const
+      ),
+    [hasLikeData, hasReactionData]
   );
 
   // Filter klien-samping: cari di caption SEMUA post yang sudah dimuat
@@ -366,20 +440,15 @@ export function ArchiveGrid() {
           />
         </div>
 
-        {/* Toggle urutan: terbaru / paling disukai — hanya jika data suka tersedia */}
-        {hasLikeData ? (
+        {/* Toggle urutan: terbaru / paling disukai / paling direaksi — hanya jika datanya tersedia */}
+        {sortOptions.length > 1 ? (
           <div
             role="group"
             aria-label="Urutkan arsip"
             className="flex items-center gap-1 rounded-xl border-2 border-ink bg-paper-raised p-1"
           >
             <ArrowDownWideNarrow className="mx-1.5 size-3.5 text-ink-faint" aria-hidden />
-            {(
-              [
-                { value: "recent", label: "Terbaru" },
-                { value: "likes", label: "Paling disukai" },
-              ] as const
-            ).map((opt) => {
+            {sortOptions.map((opt) => {
               const active = sort === opt.value;
               return (
                 <button
@@ -424,9 +493,11 @@ export function ArchiveGrid() {
       ) : (
         <>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleItems.map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
+            {visibleItems.map((item) => {
+              const rc = reactionMap[item.id];
+              const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;
+              return <ItemCard key={item.id} item={item} reaction={reaction} />;
+            })}
           </div>
           {hasMore ? (
             <div className="flex flex-col items-center gap-2 pt-2">

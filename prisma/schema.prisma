@@ -1,8 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Schema Prisma — Fess UNAIR
+//
+// Prinsip privasi: server TIDAK menyimpan identitas siapa pun.
+// Model di sini hanya mencatat interaksi anonim agregat (reaksi pembaca),
+// tanpa IP, tanpa cookie, tanpa token apa pun.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +13,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+/// Satu reaksi pembaca pada satu kartu menfess.
+/// Baris dibuat anonim: yang disimpan cuma ID media IG-nya, jenis reaksi,
+/// dan waktu. Anti-spam dilakukan rate-limit in-memory per IP — IP-nya
+/// sendiri tidak pernah ditulis ke database.
+model FessReaction {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  /// ID media Instagram (angka, lihat validasi di lib/reaksi.ts).
+  mediaId   String
+  /// Jenis reaksi — salah satu nilai REACTION_KINDS (lib/konstanta).
+  kind      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Pola baca utama: hitung per kartu per jenis.
+  @@index([mediaId, kind])
+  // Pola baca sekunder: buang baris tua saat maintenance.
+  @@index([createdAt])
 }

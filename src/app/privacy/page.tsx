@@ -67,6 +67,14 @@ export default function PrivacyPage() {
               memori server, dan tidak ditulis ke basis data.
             </li>
             <li>
+              <strong className="font-bold text-ink">Reaksi pembaca</strong> —
+              kalau kamu menekan tombol reaksi di halaman kartu, yang
+              disimpan cuma ID kartunya, jenis reaksinya, dan waktunya.
+              Tidak ada nama, akun, atau penanda siapa pun yang ikut
+              tersimpan. Pilihan reaksi kamu sendiri diingat di perangkat
+              kamu (localStorage), bukan di server.
+            </li>
+            <li>
               <strong className="font-bold text-ink">Gambar menfess</strong> —
               dibuat otomatis di server lalu diunggah sesaat ke Cloudinary
               agar bisa dibaca Instagram, dan langsung dihapus setelah posting
@@ -99,7 +107,10 @@ export default function PrivacyPage() {
             Isi menfess tetap tampil sebagai postingan di Instagram sesuai
             siklus hidup post tersebut. Gambar sementara di Cloudinary dihapus
             tepat setelah posting berhasil (atau gagal). Alamat IP untuk rate
-            limit hanya hidup di memori server dalam jangka pendek.
+            limit hanya hidup di memori server dalam jangka pendek. Reaksi
+            pembaca tersimpan selama arsip situs aktif dan bisa dihapus
+            massal kapan pun tanpa memengaruhi siapa pun secara individual —
+            isinya memang tidak terhubung ke orang tertentu.
           </p>
         </Section>
 
