@@ -343,3 +343,34 @@ Stage Summary:
 - Keputusan penting: koleksi = snapshot localStorage (tahan URL IG expired & horizon arsip 50 post), noindex + tanpa sitemap; tombol overlay selalu tampak di perangkat sentuh via @custom-variant no-hover.
 - Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — fail-open by design, verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA); Prisma log:['query'] masih aktif di dev; bunx tsc --noEmit mencakup folder examples/skills milik scaffold (error pre-existing, bukan kode app).
 - Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; badge "Tersimpan" count di halaman arsip kartu (chip kecil di meta); share koleksi sebagai daftar teks; admin cleanup endpoint reaksi post tua (butuh desain secret header); regenerasi token IG + DRY_RUN=false saat produksi.
+
+---
+
+Task ID: 16
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — ekspor koleksi jadi teks, rekomendasi "Kartu lainnya" di /fess/[id], endpoint admin pembersihan reaksi, zine-tilt grid
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, 14 route 200, console fresh-session bersih di semua halaman, dev.log hanya known issue content_publishing_limit fail-open). Keputusan: lanjut FITUR BARU dari backlog, bukan bugfix.
+- EKSPOR KOLEKSI (fitur utama — backlog "share koleksi sebagai daftar teks"):
+  - lib/koleksi.ts: buildKoleksiText(list, siteHost) — nomor urut + kutipan (excerptFromCaption: marker kategori & boilerplate ikut dibuang) + tautan lokal /fess/<id> per kartu, footer privasi; koleksi kosong → string kosong. Diverifikasi via skrip bun: caption penuh boilerplate diekstrak jadi kutipan bersih.
+  - Komponen KoleksiExport di toolbar /tersimpan: HP → share sheet (Web Share API) dengan title "Koleksi Fess UNAIR (n kartu)"; desktop → clipboard. AbortError (user batal) dibiarkan diam; share gagal → fallback clipboard + toast info berbeda; clipboard gagal → toast error spesifik. State tombol: Ekspor daftar → Menyiapkan… → Siap dibagikan (2 dtk).
+  - [BUG ditemukan & diperbaiki saat QA] ikon "ListDown" tidak ada di lucide-react → error kompilasi 500 (tertangkap curl pertama). Diganti ListOrdered; verifikasi ulang lolos.
+  - Terverifikasi di browser headless: klik → path clipboard (navigator.share tidak ada) → toast error SPESIFIK "Browser memblokir akses clipboard atau share…" karena headless memblokir clipboard — perilaku feedback lengkap terbukti; format teks diverifikasi via fungsi murni.
+- KARTU LAINNYA (rekomendasi di /fess/[id]):
+  - Komponen client FessRecommendations: fetch /api/arsip sekali, buang kartu aktif, Fisher–Yates (acak jujur, bukan sort(Math.random()) yang bias) ambil 3 kartu → grid MenfessCard. Fail-soft total: fetch gagal → section menghilang; arsip kosong → tdk dirender; loading → 3 SkeletonCard di tempatnya (tidak ada layout lompat).
+  - Dipasang di halaman /fess/[id] antara artikel dan CTA: kicker stempel dadu miring "KARTU LAINNYA", heading "Mumpung lagi di sini…", link "Lihat semua arsip →", separator dashed. Terverifikasi: 2 kartu kandidat muncul (arsip 3 post − kartu aktif), screenshot desktop rapi.
+- ENDPOINT ADMIN PEMBERSIHAN REAKSI (backlog "admin cleanup endpoint"):
+  - POST /api/admin/reaksi-cleanup — header x-admin-secret dibandingkan env MENFESS_ADMIN_SECRET (crypto.timingSafeEqual, fail-CLOSED: env tak terpasang → 401, bukan fail-open, karena destruktif). Parameter opsional {"olderThanDays": 1–3650} default 90 → deleteMany createdAt < cutoff pada FessReaction (reaksi kartu lama yang sudah keluar horizon arsip). Response sukses: deleted count + cutoffIso + note manusiawi.
+  - Semua jalur error SPESIFIK & diverifikasi curl: 401 tanpa/salah secret, 400 body bukan JSON, 400 olderThanDays tidak valid, 200 deleted:0 "database sudah bersih", GET → 405. MENFESS_ADMIN_SECRET baru di-generate (openssl rand -hex) dan ditambahkan ke .env.local; instruksi pemakaian ada di header file route.
+- STYLING DETAIL (mandat polish):
+  - .zine-tilt (globals.css): kartu grid dimiringkan bergantian ±0.35deg (properti CSS `rotate` — independen dari transform, komposisi aman dgn hover:-translate-y-1 kartu), lurus kembali saat hover/focus-within (transition-all kartu menganimasikannya). Dipasang di 3 grid: arsip, koleksi, rekomendasi.
+  - Terverifikasi computed style (0.35deg / -0.35deg), tanpa horizontal overflow (scrollWidth 390 = clientWidth 390 di mobile), hover lurus, dark mode terbaca.
+- QA agent-browser menyeluruh: /fess/[id] rekomendasi (desktop screenshot), /arsip 390px light+dark (toolbar wrap 2 baris rapi, tilt halus, ScrollTopButton muncul), /tersimpan 390px dark (tombol Ekspor daftar + Hapus semua muat sebaris), overflow check 390px bersih, semua route 200 + 404 benar + admin GET 405, console bersih, lint akhir 0 error 0 warning.
+- [Catatan proses] Turbopack menyajikan CSS globals.css STALE setelah edit (chunk name sama, konten lama; restart server pun belum cukup) — fix: hapus folder .next/dev lalu restart dev server; zine-tilt terverifikasi muncul di chunk terlayani. Kalau edit globals.css tidak ter-apply di dev, hapus .next/dev.
+
+Stage Summary:
+- VERIFIED end-to-end: ekspor koleksi (semua jalur feedback spesifik, format teks bersih), rekomendasi kartu acak di halaman kartu (fail-soft, acak jujur), endpoint admin pembersihan reaksi (auth timing-safe, fail-closed, semua error spesifik), zine-tilt di 3 grid (light/dark/mobile tanpa overflow).
+- Keputusan penting: endpoint admin FAIL-CLOSED (kebalikan fail-open kuota IG — destruktif harus aman); rekomendasi = bonus yang menghilang saat data tidak ada; ekspor pakai excerpt mesin caption yang sama biar konsisten dengan semua permukaan.
+- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA); Prisma log:['query'] masih aktif di dev; jangan lupa pasang MENFESS_ADMIN_SECRET di Vercel kalau mau endpoint cleanup aktif di produksi.
+- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; cron pembersihan reaksi otomatis (panggil endpoint admin dari cron Vercel); share gambar koleksi sebagai collage; reaksi di RSS; regenerasi token IG + DRY_RUN=false saat produksi.

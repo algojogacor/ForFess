@@ -19,6 +19,7 @@ import { PostPreview } from "@/components/menfess/PostPreview";
 import { MenfessActions } from "@/components/menfess/MenfessActions";
 import { SaveButton } from "@/components/menfess/SaveButton";
 import { ReactionBar } from "@/components/menfess/ReactionBar";
+import { FessRecommendations } from "@/components/menfess/FessRecommendations";
 import { getMediaCached } from "@/lib/media-lookup";
 import { InstagramError } from "@/lib/instagram";
 import {
@@ -212,6 +213,9 @@ export default async function FessDetailPage({ params }: PageProps) {
             </div>
           </div>
         </article>
+
+        {/* ==== Rekomendasi: tiga kartu acak dari arsip (fail-soft) ==== */}
+        <FessRecommendations currentId={id} />
 
         {/* ==== CTA lanjutan ==== */}
         <div className="mx-auto mt-12 max-w-xl rounded-2xl border-2 border-dashed border-ink/30 bg-paper-raised/50 p-6 text-center">

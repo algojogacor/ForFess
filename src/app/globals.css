@@ -314,6 +314,22 @@
   );
 }
 
+/* == Kemiringan zine ==
+   Kartu di grid arsip/koleksi dimiringkan halus bergantian (ganjil ke kanan,
+   genap ke kiri) — kesan ditempel tangan di kertas. Lurus kembali saat hover
+   atau fokus. Memakai properti CSS `rotate` (independen dari transform)
+   supaya komposisi dgn hover:-translate-y-1 pada kartu tetap jalan normal. */
+.zine-tilt > :nth-child(odd) {
+  rotate: 0.35deg;
+}
+.zine-tilt > :nth-child(even) {
+  rotate: -0.35deg;
+}
+.zine-tilt > *:hover,
+.zine-tilt > *:focus-within {
+  rotate: 0deg;
+}
+
 /* Teks outline ala poster */
 .text-outline {
   -webkit-text-stroke: 2px var(--ink);

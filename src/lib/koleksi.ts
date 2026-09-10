@@ -13,6 +13,7 @@
 import { useSyncExternalStore } from "react";
 
 import type { ArchiveItem } from "@/types/menfess";
+import { excerptFromCaption } from "@/lib/caption";
 
 /** Satu kartu yang disimpan — snapshot data publik + waktu simpan. */
 export interface SavedFess {
@@ -160,6 +161,34 @@ export function clearKoleksi(): void {
     /* abaikan */
   }
   announce();
+}
+
+/**
+ * Susun seluruh koleksi jadi satu teks rapi — buat tombol ekspor di
+ * halaman koleksi (dibagikan lewat share sheet / disalin ke clipboard).
+ * Formatnya sengaja polos: enak dibaca di chat, gampang ditempel.
+ */
+export function buildKoleksiText(list: SavedFess[], siteHost: string): string {
+  if (list.length === 0) return "";
+
+  const lines: string[] = [];
+  lines.push(`Koleksi Fess UNAIR — ${list.length} kartu`);
+  lines.push(`(dikumpulkan sendiri dari ${siteHost}, tersimpan di perangkat ini)`);
+  lines.push("");
+
+  list.forEach((s, i) => {
+    const caption = s.item.caption ?? "";
+    // Ekstrak isi menfess dari caption (buang boilerplate + marker kategori)
+    // — pakai fungsi yang sama dengan semua permukaan situs.
+    const excerpt = excerptFromCaption(caption, 160) || "(tanpa teks)";
+    lines.push(`${i + 1}. "${excerpt}"`);
+    lines.push(`   ${siteHost}/fess/${s.item.id}`);
+    lines.push("");
+  });
+
+  lines.push("—");
+  lines.push("Menfess anonim tayang di @fess_unair (Instagram) · koleksi ini privat di perangkatmu.");
+  return lines.join("\n");
 }
 
 /* ------------------------------------------------------------------ */

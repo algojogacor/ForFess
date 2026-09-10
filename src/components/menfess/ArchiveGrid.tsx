@@ -419,7 +419,7 @@ export function ArchiveGrid() {
         </div>
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="zine-tilt grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {visibleItems.map((item) => {
               const rc = reactionMap[item.id];
               const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;

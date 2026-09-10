@@ -11,6 +11,7 @@ import {
 import { clearKoleksi, useKoleksi } from "@/lib/koleksi";
 import { REACTIONS } from "@/constants";
 import { cn } from "@/lib/utils";
+import { KoleksiExport } from "./KoleksiExport";
 
 /** Deteksi mount tanpa setState-in-effect (aman hydration & lint). */
 const emptySubscribe = () => () => {};
@@ -178,6 +179,7 @@ export function KoleksiGrid() {
           <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink-faint">
             {list.length} kartu · di perangkat ini saja
           </p>
+          <KoleksiExport list={list} />
           <button
             type="button"
             onClick={handleClearAll}
@@ -216,7 +218,7 @@ export function KoleksiGrid() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="zine-tilt grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((s) => {
             const rc = reactionMap[s.item.id];
             const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;
