@@ -188,3 +188,51 @@ export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
       timestamp: m.timestamp,
     }));
 }
+
+/**
+ * Ambil SATU post berdasarkan ID — dipakai halaman /fess/[id].
+ * Melempar InstagramError jika gagal (termasuk ID nggak dikenal —
+ * Meta membalas error "(#100) Tried accessing nonexisting field" dsb.).
+ */
+export async function getMediaById(mediaId: string): Promise<ArchiveItem> {
+  // Hanya terima karakter yang masuk akal untuk ID media Graph API —
+  // jaga-jaga biar path nggak bisa diisi hal aneh oleh user.
+  if (!/^[A-Za-z0-9_]{5,64}$/.test(mediaId)) {
+    throw new InstagramError("Format ID media tidak dikenal");
+  }
+
+  const data = await graphFetch<GraphMediaItem>(mediaId, {
+    query: {
+      fields: "id,caption,media_url,permalink,timestamp",
+      access_token: accessToken,
+    },
+  });
+
+  return {
+    id: data.id,
+    caption: data.caption,
+    mediaUrl: data.media_url,
+    permalink: data.permalink,
+    timestamp: data.timestamp,
+  };
+}
+
+/**
+ * Jumlah TOTAL post yang pernah tayang di akun (field media_count
+ * di node user). Dipakai strip statistik di landing.
+ * Melempar InstagramError jika gagal — pemanggil yang memutuskan fail-open.
+ */
+export async function getTotalMediaCount(): Promise<number> {
+  const data = await graphFetch<{ media_count?: number }>(userId, {
+    query: {
+      fields: "media_count",
+      access_token: accessToken,
+    },
+  });
+
+  const count = data.media_count;
+  if (typeof count !== "number" || !Number.isFinite(count) || count < 0) {
+    throw new InstagramError("media_count tidak valid");
+  }
+  return count;
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Instagram } from "lucide-react";
-import { IG_HANDLE, IG_PROFILE_URL, SITE_HOST, SITE_URL } from "@/constants";
+import { Instagram, Rss } from "lucide-react";
+import { IG_HANDLE, IG_PROFILE_URL, SITE_HOST } from "@/constants";
 
 /**
  * Footer konsisten untuk semua halaman.
@@ -84,6 +84,15 @@ export function Footer() {
                 >
                   <Instagram className="size-4" aria-hidden />
                   {IG_HANDLE}
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/feed.xml"
+                  className="inline-flex items-center gap-2 text-inverse-fg/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
+                >
+                  <Rss className="size-4" aria-hidden />
+                  RSS feed
                 </a>
               </li>
             </ul>

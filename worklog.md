@@ -189,3 +189,36 @@ Stage Summary:
 - Pipeline /media terbukti end-to-end hidup dari sandbox: arsip menampilkan postingan IG asli (post uji "Tes sistem kedua"). Yang belum terverifikasi: posting otomatis baru (dry-run masih true) & content_publishing_limit (butuh token dengan permission content publishing).
 - Risiko/known issue: content_publishing_limit gagal dengan code 1 dari Meta meski token valid untuk /media → minta owner regenerate token dengan scope instagram_business_content_publishing. MENFESS_DRY_RUN masih true (disengaja untuk QA).
 - Ide ronde berikutnya: halaman arsip pakai pagination server-side (after-cursor Graph API) bila post >24; statistik nyata (jumlah post) di landing jika kuota aman; preview kartu juga di riwayat kiriman; i18n struktur konstanta per-universitas (multi-brand).
+
+---
+
+Task ID: 11
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — halaman kartu /fess/[id], statistik live, RSS feed, mini-preview riwayat
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, error tunggal di dev.log hanya content_publishing_limit yang fail-open). QA agent-browser awal: landing/arsip/kirim aman → lanjut fitur baru.
+- HALAMAN KARTU /fess/[id] (fitur utama ronde ini — "permalink lokal" per menfess):
+  - src/app/fess/[id]/page.tsx: server component, fetch satu media via getMediaCached; render PostPreview (template identik dgn kartu IG) + panel metadata (tanggal WIB, @fess_unair, badge Anonim, blockquote teks lengkap) + CTA tulis menfess. Post tidak ada / API gagal → notFound() (404 terverifikasi /fess/bogus12345).
+  - generateMetadata: judul = kutipan menfess (potong di batas kata), robots noindex utk kartu tanpa teks, canonical.
+  - opengraph-image.tsx per kartu: OG 1200×630 dgn teks menfess asli (font Space Grotesk/Mono sama dgn generator kartu), tier font berdasar panjang teks; fallback OG brand kuning "* Fess UNAIR" jika post hilang/API gagal — tidak pernah 500.
+  - Komponen MenfessActions (client): "Bagikan kartu" (Web Share API → fallback clipboard + toast info) & "Salin tautan" — URL lokal /fess/[id], bukan IG.
+  - lib/media-lookup.ts: cache in-memory lookup per-ID (positif 10 mnt, negatif 60 dtk anti brute-force ID, max 100 entri) — dipakai page + OG route sekaligus (1 panggilan Graph per kunjungan).
+- INSTAGRAM LIB: getMediaById (validasi format ID regex utk keamanan path) + getTotalMediaCount (field media_count — TERBUKTI JALAN dgn token sekarang, beda dgn content_publishing_limit!).
+- lib/caption.ts (baru): extractMenfessText dgn 2 marker boilerplate (format sekarang "Kirim menfess kamu juga lewat…" + format lama "— terkirim anonim melalui…") + bersihkan baris hashtag ekor; excerptOfText potong di batas kata. ArchiveGrid & SubmissionHistory kini pakai util bersama (hapus duplikasi).
+- STATISTIK LIVE LANDING: api/stats/route.ts (media_count, cache 5 mnt, fail-open posts:null) + komponen LiveStats — strip "Sudah N menfess tayang · Lihat arsip →" di bawah chip kuota; disembunyikan jika angka tak bisa dicek (jujur, bukan angka karangan). Terverifikasi tampil dgn angka nyata (1).
+- RSS FEED /feed.xml: RSS 2.0, 20 post terakhir, link ke halaman kartu lokal, fail-open = channel kosong valid (bukan 500); link di footer + autodiscovery <link rel="alternate" type="application/rss+xml"> via metadata alternates.types. Terverifikasi valid & berisi post asli.
+- ARSIP: kartu kini link INTERNAL ke /fess/[id] (badge hover "Lihat kartu" + link "Halaman kartu"; "Buka di IG" tetap ada sbg link eksternal; focus-visible inset ring + focus-within shadow utk keyboard). Tombol Bagikan kini membagikan URL lokal (OG image ikut tampil di chat).
+- RIWAYAT KIRIMAN: mini-preview kartu (w-16) per baris — pratinjau stempel persis kartu IG.
+- BUG DITEMUKAN & DIPERBAIKI:
+  1. Mini preview SubmissionHistory melebar full-row (PostPreview root w-full menang atas w-16 yang dilewatkan via className → teks per baris rusak). Fix: bungkus dgn div w-16 fixed (PostPreview w-full dalam wrapper).
+  2. Boilerplate format lama ikut tampil di halaman kartu/OG/feed (marker baru belum ada). Fix: lib/caption.ts multi-marker + strip hashtag ekor.
+  3. Turbopack module graph stale utk route opengraph-image (caption.ts sudah berubah tapi OG masih render kode lama; page & feed sudah benar). Fix: restart dev server (scripts/dev-server.sh idempotent). Dicatat: kalau edit lib yang dipakai metadata route, cek juga OG-nya.
+- QA agent-browser lengkap: detail page light (kartu+metadata+aksi+CTA), dark (kartu sengaja tetap terang = identik IG; panel metadata kontras OK), mobile 390px (semua stack rapi), arsip → klik kartu → URL /fess/[id] benar, tombol "Salin tautan" → jadi "TERSALIN", submit dry-run → panel sukses + "Kiriman kamu" mini-preview muncul, feed.xml valid, /api/stats posts:1, OG image visual OK, semua route 200, lint akhir 0/0.
+- Detail styling: badge hover arsip kini inline-flex + ikon mata, focus ring inset pada link kartu, blockquote kuning di detail, CTA dashed panel, footer +RSS.
+
+Stage Summary:
+- VERIFIED: halaman kartu /fess/[id] end-to-end (data nyata dari IG), OG image per kartu, statistik live nyata (media_count), RSS, mini-preview riwayat — semua lolos QA light/dark desktop & mobile.
+- Keputusan penting: share arsip kini membagikan URL situs lokal (bukan IG) supaya OG image kartu ikut tampil; kartu tanpa teks → noindex.
+- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja). media_count & /media TERBUKTI jalan dgn token sekarang.
+- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; halaman "acah"/random kartu; multi-brand constants; cache-header/ISR utk /fess/[id]; regenerasi token IG + DRY_RUN=false saat produksi.

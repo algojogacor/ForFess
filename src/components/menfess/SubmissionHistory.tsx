@@ -5,6 +5,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { ExternalLink, History, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
+import { PostPreview } from "@/components/menfess/PostPreview";
 import {
   clearSubmissions,
   listSubmissions,
@@ -103,41 +104,53 @@ export function SubmissionHistory() {
         {records.slice(0, 5).map((record) => (
           <li
             key={record.id}
-            className="flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-signal-soft/30 sm:px-6"
+            className="flex gap-4 px-5 py-4 transition-colors hover:bg-signal-soft/30 sm:px-6"
           >
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <span
-                className={
-                  record.dryRun
-                    ? "inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-tomato-deep"
-                    : "inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed"
-                }
-              >
-                <UserRound className="size-3" aria-hidden />
-                {record.dryRun ? "Uji coba (dry-run)" : "Tayang"}
-              </span>
-              <time
-                dateTime={new Date(record.at).toISOString()}
-                title={exactDate(record.at)}
-                className="font-mono text-[12px] uppercase tracking-wider text-ink-faint"
-              >
-                {relativeDate(record.at)}
-              </time>
-              {record.permalink ? (
-                <a
-                  href={record.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto inline-flex items-center gap-1 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
-                >
-                  Buka post
-                  <ExternalLink className="size-3.5" aria-hidden />
-                </a>
-              ) : null}
+            {/* Mini kartu — pratinjau persis seperti yang diposting ke IG.
+                Dibungkus div berlebar tetap karena PostPreview selalu w-full
+                terhadap kontainernya (konflik w-16 vs w-full kalau langsung). */}
+            <div className="hidden w-16 shrink-0 sm:block">
+              <PostPreview
+                text={record.text}
+                ariaLabel={`Pratinjau kartu kiriman: ${excerptOf(record.text).slice(0, 60)}`}
+                className="rounded-lg border-2 border-ink shadow-[2px_2px_0_0_var(--hard-soft)]"
+              />
             </div>
-            <p className="text-[14px] leading-relaxed text-ink-soft">
-              {excerptOf(record.text)}
-            </p>
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span
+                  className={
+                    record.dryRun
+                      ? "inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-tomato-deep"
+                      : "inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed"
+                  }
+                >
+                  <UserRound className="size-3" aria-hidden />
+                  {record.dryRun ? "Uji coba (dry-run)" : "Tayang"}
+                </span>
+                <time
+                  dateTime={new Date(record.at).toISOString()}
+                  title={exactDate(record.at)}
+                  className="font-mono text-[12px] uppercase tracking-wider text-ink-faint"
+                >
+                  {relativeDate(record.at)}
+                </time>
+                {record.permalink ? (
+                  <a
+                    href={record.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto inline-flex items-center gap-1 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+                  >
+                    Buka post
+                    <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                ) : null}
+              </div>
+              <p className="text-[14px] leading-relaxed text-ink-soft">
+                {excerptOf(record.text)}
+              </p>
+            </div>
           </li>
         ))}
       </ul>

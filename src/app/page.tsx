@@ -9,6 +9,7 @@ import {
 import { buttonVariants } from "@/components/ui/button-variants";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { QuotaStatus } from "@/components/menfess/QuotaStatus";
+import { LiveStats } from "@/components/menfess/LiveStats";
 import { cn } from "@/lib/utils";
 import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";
 
@@ -159,9 +160,10 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Status kuota live — data nyata dari Instagram, bukan angka karangan */}
-            <div className="mt-10 animate-rise" style={{ animationDelay: "280ms" }}>
+            {/* Status kuota + statistik live — data nyata dari Instagram, bukan angka karangan */}
+            <div className="mt-10 flex animate-rise flex-col items-start gap-4" style={{ animationDelay: "280ms" }}>
               <QuotaStatus />
+              <LiveStats />
             </div>
           </div>
 

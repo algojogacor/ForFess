@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import Link from "next/link";
 import {
   Check,
   ExternalLink,
+  Eye,
   Instagram,
   Link2,
   RefreshCcw,
@@ -16,25 +18,13 @@ import {
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";
+import { IG_HANDLE, IG_PROFILE_URL, SITE_URL } from "@/constants";
 import type { ArchiveItem, ArchiveResponse, ArchiveSource } from "@/types/menfess";
+import { excerptFromCaption } from "@/lib/caption";
 import { cn } from "@/lib/utils";
 
-/** Panjang excerpt caption sebelum dipotong. */
-const CAPTION_EXCERPT_LEN = 160;
 /** Jumlah kartu per "halaman" tombol Muat lebih banyak. */
 const PAGE_SIZE = 9;
-
-/**
- * Ambil bagian "isi menfess" dari caption IG — buang boilerplate
- * sumber link & hashtag yang kita tambahkan sendiri saat posting.
- */
-function excerptFromCaption(caption: string | undefined): string {
-  if (!caption) return "";
-  const body = caption.split("\n\nKirim menfess")[0].trim();
-  if (body.length <= CAPTION_EXCERPT_LEN) return body;
-  return `${body.slice(0, CAPTION_EXCERPT_LEN).trimEnd()}…`;
-}
 
 function formatDate(timestamp: string | undefined): string {
   if (!timestamp) return "";
@@ -57,9 +47,10 @@ function relativeTime(timestamp: string | undefined): string {
   }
 }
 
-/** Bagikan / salin tautan satu kartu — Web Share API, fallback ke clipboard. */
+/** Bagikan / salin tautan satu kartu — Web Share API, fallback ke clipboard.
+ *  Yang dibagikan adalah halaman kartu LOKAL (cepat, ada OG image), bukan IG. */
 async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared" | "copied"> {
-  const url = item.permalink ?? IG_PROFILE_URL;
+  const url = `${SITE_URL}/fess/${item.id}`;
   const text = excerpt ? `Menfess: "${excerpt}"` : `Menfess dari ${IG_HANDLE}`;
 
   if (typeof navigator.share === "function") {
@@ -80,7 +71,7 @@ async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared"
 }
 
 function ItemCard({ item }: { item: ArchiveItem }) {
-  const excerpt = excerptFromCaption(item.caption);
+  const excerpt = excerptFromCaption(item.caption, 160);
   const date = formatDate(item.timestamp);
   const relative = relativeTime(item.timestamp);
   const [copied, setCopied] = useState(false);
@@ -108,13 +99,11 @@ function ItemCard({ item }: { item: ArchiveItem }) {
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--hard-strong)]">
-      <a
-        href={item.permalink ?? IG_PROFILE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={excerpt ? `Buka post di Instagram: ${excerpt}` : "Buka post di Instagram"}
-        className="relative block aspect-square overflow-hidden border-b-2 border-ink bg-paper"
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--hard-strong)] focus-within:shadow-[6px_6px_0_0_var(--hard-strong)]">
+      <Link
+        href={`/fess/${item.id}`}
+        aria-label={excerpt ? `Buka halaman kartu menfess: ${excerpt}` : "Buka halaman kartu menfess"}
+        className="relative block aspect-square overflow-hidden border-b-2 border-ink bg-paper outline-none focus-visible:shadow-[inset_0_0_0_3px_var(--focus-ring)]"
       >
         {item.mediaUrl ? (
           <img
@@ -128,10 +117,11 @@ function ItemCard({ item }: { item: ArchiveItem }) {
             <Instagram className="size-8" aria-hidden />
           </div>
         )}
-        <span className="pointer-events-none absolute right-3 top-3 rounded-md border-2 border-ink bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          Buka IG
+        <span className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-md border-2 border-ink bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+          <Eye className="size-3" aria-hidden />
+          Lihat kartu
         </span>
-      </a>
+      </Link>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
           {relative ? <span title={date}>{relative}</span> : date || "Tanpa tanggal"}
@@ -140,6 +130,13 @@ function ItemCard({ item }: { item: ArchiveItem }) {
           {excerpt || "Tanpa caption."}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Link
+            href={`/fess/${item.id}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+          >
+            Halaman kartu
+            <Eye className="size-3.5" aria-hidden />
+          </Link>
           {item.permalink ? (
             <a
               href={item.permalink}

@@ -51,6 +51,11 @@ export const metadata: Metadata = {
     title: "Fess UNAIR",
     description: "Menfess anonim buat warga UNAIR — tayang di @fess_unair.",
   },
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed.xml",
+    },
+  },
 };
 
 export const viewport: Viewport = {
