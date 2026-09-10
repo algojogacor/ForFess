@@ -165,3 +165,27 @@ Stage Summary:
 - Keputusan penting: kartu IG (PostPreview/Satori) SENGAJA tetap terang di tema gelap = identik dengan hasil postingan asli.
 - Risiko/known issue (tetap): token IG "unknown error" dari sandbox (expired atau graph.facebook.com diblokir) → chip kuota & arsip degrade gracefully; verifikasi ulang di Vercel dengan token fresh. Draf menfess tersimpan plaintext di localStorage (hanya teks anonim, tanpa identitas — risiko rendah, disebut di banner).
 - Ide ronde berikutnya: tombol "bagikan" per-kartu arsip, toast global (sonner) untuk feedback salin, riwayat kiriman lokal ("Kiriman kamu"), lint defaultTheme=system vs light di landing, verifikasi Turnstile asli + MENFESS_DRY_RUN=false saat produksi.
+
+---
+
+Task ID: 10
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — toast global, "Kiriman kamu", arsip upgrade, FAQ, manifest & OG image
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, error lama Navbar sudah hilang dari dev.log). QA agent-browser awal: landing/kirim/arsip aman → lanjut fitur, bukan bugfix besar.
+- TOAST GLOBAL (sonner): sonner.tsx distyling ulang gaya sticker-zine (kartu kertas, border tinta, hard shadow 5px, font brand; var --normal-* dari CSS vars → ikut tema otomatis). <Toaster position="bottom-center" offset={20}/> di layout.tsx. Dipakai untuk: fallback share (info), clipboard gagal (error), hapus riwayat (sukses).
+- "KIRIMAN KAMU" (fitur utama ronde ini): riwayat kiriman sukses di localStorage (key fess-unair:submissions:v1, maks 10) — lib baru src/lib/submission-history.ts (list/save/clear + event). Komponen SubmissionHistory di /kirim di bawah form: chip status (Tayang / Uji coba dry-run), waktu relatif (date-fns id), cuplikan teks, link post, tombol hapus + toast, catatan privasi. MenfessForm memanggil saveSubmission saat ok:true lalu dispatch event SUBMISSION_SAVED_EVENT agar panel langsung muncul tanpa reload.
+  - BUG DITEMUKAN & DIPERBAIKI saat QA: panel lama hanya membaca localStorage di mount → setelah submit, panel tidak muncul sampai reload. Fix via CustomEvent; terverifikasi langsung muncul ("Kiriman kamu 2").
+- ARSIP UPGRADE: MAX_ITEMS 12→24; per-kartu tombol "Bagikan" (Web Share API → fallback clipboard + toast sukses; clipboard diblokir → toast error spesifik, tidak lagi diam); waktu relatif ("12 menit yang lalu") dengan tanggal eksak sebagai title; pagination "Muat lebih banyak" 9/klik (pencarian tetap menyaring SEMUA post yang dimuat, bukan hanya halaman terlihat); input cari dapat focus ring brand; badge "BUKA IG" muncul saat hover gambar.
+- FAQ di landing: section baru #faq sebelum CTA — 6 pertanyaan nyata (anonimitas, kecepatan tayang, batas kirim, penyimpanan data, gagal kirim, bukan akun resmi) + JSON-LD FAQPage untuk rich results Google. Accordion shadcn distyling ulang: kartu border tinta, nomor mono tomat, shadow menguat saat terbuka.
+- PWA & OG: manifest.ts (nama, warna brand krem/kuning, icon /icon.svg — icon dikopi dari app ke public). opengraph-image.tsx baru: OG 1200×630 via next/og ImageResponse dengan font Space Grotesk/Mono yang sama dengan generator kartu (fonts.generated.ts, decode base64) — hasil PNG diverifikasi visual (bingkai tinta, heading marker kuning, kartu contoh miring, chip @fess_unair). Twitter card naik ke summary_large_image.
+- DETAIL STYLING: scroll-smooth di html (dengan override prefers-reduced-motion yang sudah ada), fokus ring kuning di input cari arsip, hover badge kartu, toast konsisten dua tema.
+- QA agent-browser lengkap: landing light+dark (desktop & 390px), FAQ buka-tutup di kedua tema + mobile, golden path submit (dry-run OK), riwayat muncul live + persist + hapus + toast, salin tautan ("Tautan tersalin"), arsip dengan 1 POST ASLI dari IG (token kini jalan untuk /media!), cari match & empty state, share button + error toast di headless (clipboard diblokir), 404, manifest, sitemap. Lint akhir 0 error 0 warning. Semua route 200.
+- DIAGNOSIS BARU soal token IG: /media BERHASIL diakses dari sandbox (arsip menampilkan post asli) tapi content_publishing_limit tetap balas "An unknown error has occurred" (code 1, OAuthException) — terkonfirmasi via curl langsung ke graph.facebook.com. Artinya: BUKAN sandbox yang memblokir; token ini kemungkinan besar tidak punya permission instagram_business_content_publishing, atau akun belum professional. Fail-open bekerja sesuai desain (submit tetap jalan, chip "nggak bisa dicek").
+
+Stage Summary:
+- VERIFIED: toast global, riwayat "Kiriman kamu" (dengan bug live-update terfix), arsip baru (share/relative time/pagination/search), FAQ + JSON-LD, manifest PWA, OG image brand — semua lolos QA light/dark desktop & mobile.
+- Pipeline /media terbukti end-to-end hidup dari sandbox: arsip menampilkan postingan IG asli (post uji "Tes sistem kedua"). Yang belum terverifikasi: posting otomatis baru (dry-run masih true) & content_publishing_limit (butuh token dengan permission content publishing).
+- Risiko/known issue: content_publishing_limit gagal dengan code 1 dari Meta meski token valid untuk /media → minta owner regenerate token dengan scope instagram_business_content_publishing. MENFESS_DRY_RUN masih true (disengaja untuk QA).
+- Ide ronde berikutnya: halaman arsip pakai pagination server-side (after-cursor Graph API) bila post >24; statistik nyata (jumlah post) di landing jika kuota aman; preview kartu juga di riwayat kiriman; i18n struktur konstanta per-universitas (multi-brand).

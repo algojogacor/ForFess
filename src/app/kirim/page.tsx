@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MenfessForm } from "@/components/menfess/MenfessForm";
+import { SubmissionHistory } from "@/components/menfess/SubmissionHistory";
 
 export const metadata: Metadata = {
   title: "Kirim menfess",
@@ -26,6 +27,9 @@ export default function KirimPage() {
         </header>
 
         <MenfessForm />
+
+        {/* Riwayat kiriman sukses dari perangkat ini — hilang sendiri kalau kosong */}
+        <SubmissionHistory />
       </div>
     </div>
   );

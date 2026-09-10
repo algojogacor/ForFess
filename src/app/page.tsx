@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { ArrowDown, SendHorizonal } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { QuotaStatus } from "@/components/menfess/QuotaStatus";
@@ -56,6 +62,33 @@ const RULES = [
 const SAMPLE_A =
   "Lolos sidang skripsi hari ini. Makasih buat semua doa dan kopi yang nemenin dari awal.";
 const SAMPLE_B = "Semangat, adik-adik yang besok UAS. Kalian bakal baik-baik aja.";
+
+const FAQS = [
+  {
+    q: "Apakah ini beneran anonim?",
+    a: `Beneran. Form kami nggak punya kolom nama, dan server nggak mencatat siapa yang mengirim — yang diteruskan ke Instagram cuma teksnya. Satu hal yang perlu kamu jaga sendiri: jangan menulis identitasmu di dalam isi menfess, karena teksnya tayang publik.`,
+  },
+  {
+    q: "Berapa lama menfessku tayang setelah dikirim?",
+    a: "Otomatis, biasanya beberapa detik setelah verifikasi selesai — sistemnya generate gambar lalu posting tanpa antre manusia. Kalau kuota harian Instagram (25 post per 24 jam) sedang penuh, kamu bakal lihat pesan yang jelas soal itu, bukan error misterius.",
+  },
+  {
+    q: "Boleh kirim lebih dari satu menfess?",
+    a: "Boleh. Ada jeda 20 detik antar kiriman dan maksimal 3 kiriman per 15 menit dari satu koneksi — cukup untuk cerita yang beda-beda, tapi nggak cukup untuk membanjiri feed.",
+  },
+  {
+    q: "Apakah data atau teks saya disimpan di situs ini?",
+    a: "Nggak. Server tidak menyimpan arsip teks kiriman — daftar arsip di situs ini diambil langsung dari postingan Instagram. Draf yang belum terkirim dan riwayat “Kiriman kamu” tersimpan hanya di browser kamu sendiri dan bisa kamu hapus kapan saja.",
+  },
+  {
+    q: "Menfess saya gagal kirim, harus gimana?",
+    a: "Baca pesan errornya — selalu disebutkan penyebabnya secara spesifik: teks terlalu pendek, captcha belum dicentang, koneksi bermasalah, atau kuota IG penuh. Perbaiki sesuai petunjuknya lalu kirim ulang. Kalau kuota yang penuh, tunggu saja — kuota terisi ulang bergulir per 24 jam.",
+  },
+  {
+    q: "Ini akun resmi Universitas Airlangga?",
+    a: `Bukan. Fess UNAIR adalah proyek independen buatan mahasiswa dan nggak berafiliasi apa pun dengan Universitas Airlangga. Semua isi menfess adalah tanggung jawab pengirimnya masing-masing.`,
+  },
+];
 
 export default function LandingPage() {
   return (
@@ -233,6 +266,74 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ==== FAQ: pertanyaan yang memang sering ditanya ==== */}
+      <section id="faq" className="scroll-mt-20 bg-paper">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_1.8fr] lg:gap-16">
+            <div>
+              <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-tomato">
+                Sering ditanya
+              </p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                Yang paling sering ditanyain, dijawab di sini.
+              </h2>
+              <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-ink-soft">
+                Kalau pertanyaanmu belum ada di daftar ini, cek halaman{" "}
+                <Link
+                  href="/privacy"
+                  className="font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+                >
+                  privasi
+                </Link>{" "}
+                — atau ya, langsung coba aja kirim menfessnya.
+              </p>
+            </div>
+            <Accordion type="single" collapsible className="flex flex-col gap-3">
+              {FAQS.map((faq, i) => (
+                <AccordionItem
+                  key={faq.q}
+                  value={`faq-${i}`}
+                  className="overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised px-0 shadow-[4px_4px_0_0_var(--hard-soft)] transition-shadow duration-200 data-[state=open]:shadow-[6px_6px_0_0_var(--hard-strong)]"
+                >
+                  <AccordionTrigger className="gap-4 rounded-none px-5 py-4 text-left text-[16px] font-bold leading-snug tracking-tight hover:no-underline sm:px-6">
+                    <span className="flex items-start gap-3">
+                      <span
+                        aria-hidden
+                        className="mt-0.5 font-mono text-[12px] font-bold text-tomato"
+                      >
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      {faq.q}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-0 sm:px-6">
+                    <p className="max-w-2xl pl-0 text-[15px] leading-relaxed text-ink-soft sm:pl-8">
+                      {faq.a}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
+      {/* Data terstruktur FAQPage — membantu Google menampilkan FAQ langsung di hasil pencarian */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map((faq) => ({
+              "@type": "Question",
+              name: faq.q,
+              acceptedAnswer: { "@type": "Answer", text: faq.a },
+            })),
+          }),
+        }}
+      />
 
       {/* ==== CTA band, dibingkai tape zine ==== */}
       <div aria-hidden className="h-2.5 border-y-2 border-ink bg-tape" />

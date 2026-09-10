@@ -21,7 +21,9 @@ import { Alert } from "@/components/ui/Alert";
 import { CharCounter } from "@/components/menfess/CharCounter";
 import { TurnstileWidget } from "@/components/menfess/TurnstileWidget";
 import { PostPreview } from "@/components/menfess/PostPreview";
+import { saveSubmission } from "@/lib/submission-history";
 import type { SubmitResponse } from "@/types/menfess";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
@@ -157,6 +159,12 @@ export function MenfessForm() {
           } catch {
             /* abaikan */
           }
+          // Catat ke riwayat lokal "Kiriman kamu" (hanya di perangkat ini).
+          saveSubmission({
+            text: content,
+            permalink: data.permalink,
+            dryRun: Boolean(data.dryRun),
+          });
           setSuccess({ permalink: data.permalink, dryRun: data.dryRun });
           setStatus("success");
           return;
@@ -201,7 +209,10 @@ export function MenfessForm() {
       await navigator.clipboard.writeText(url);
       setShareState("copied");
     } catch {
-      /* clipboard API bisa diblokir — biarkan tombol diam */
+      // Clipboard API bisa diblokir browser/izin — beri tahu, jangan diam.
+      toast.error("Gagal menyalin tautan", {
+        description: "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
+      });
     }
   };
 
@@ -219,7 +230,11 @@ export function MenfessForm() {
         /* user batal share — bukan error */
       }
     } else {
+      // Fallback: salin tautan + beri tahu user lewat toast kenapa bentuknya beda.
       await handleCopyLink();
+      toast.info("Browser kamu nggak dukung dialog share", {
+        description: "Tautannya udah disalin ke clipboard — tinggal tempel di chat atau story.",
+      });
     }
   };
 

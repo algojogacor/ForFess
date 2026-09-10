@@ -15,8 +15,8 @@ export const runtime = "nodejs";
 
 /** Umur cache segar (milidetik) — 5 menit. */
 const CACHE_TTL_MS = 5 * 60 * 1000;
-/** Jumlah post maksimum yang disajikan. */
-const MAX_ITEMS = 12;
+/** Jumlah post maksimum yang disajikan (client membaginya per halaman). */
+const MAX_ITEMS = 24;
 
 let cache: { items: ArchiveItem[]; fetchedAt: number } | null = null;
 

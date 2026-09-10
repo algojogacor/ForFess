@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { Toaster } from "@/components/ui/sonner";
 import { SITE_URL } from "@/constants";
 
 // Font identitas: Space Grotesk (display + body) & Space Mono (label/ticker).
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
     locale: "id_ID",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Fess UNAIR",
     description: "Menfess anonim buat warga UNAIR — tayang di @fess_unair.",
   },
@@ -65,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" className="scroll-smooth" suppressHydrationWarning>
       <body
         className={`${spaceGrotesk.variable} ${spaceMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col font-sans`}
       >
@@ -73,6 +74,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
+          <Toaster position="bottom-center" offset={20} />
         </ThemeProvider>
       </body>
     </html>
