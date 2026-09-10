@@ -69,6 +69,7 @@
   --animate-marquee: marquee 32s linear infinite;
   --animate-rise: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-shuffle: shuffle 0.5s ease-in-out;
 }
 
 @keyframes marquee {
@@ -96,6 +97,24 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes shuffle {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-2.5deg) translateY(-7px);
+  }
+  50% {
+    transform: rotate(2deg) translateY(4px);
+  }
+  75% {
+    transform: rotate(-1.25deg);
+  }
+  100% {
+    transform: rotate(0deg);
   }
 }
 
@@ -323,6 +342,50 @@
   line-height: 1.4;
   color: var(--ink-soft);
   background: var(--paper-raised);
+}
+
+/* == Tekstur kertas zine ==
+   Grain SVG halus (feTurbulence) di atas segalanya — pointer-events none,
+   opacity sangat rendah. Memberi rasa "kertas" tanpa mengganggu keterbacaan. */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+.dark .grain-overlay {
+  opacity: 0.07;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grain-overlay {
+    display: none;
+  }
+}
+
+/* == Scroll reveal ==
+   Diterapkan HANYA setelah JS aktif (lihat komponen Reveal) — tanpa JS,
+   konten tetap terlihat normal. is-visible memunculkan elemennya. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 /* Hormati preferensi pengguna: kurangi gerakan */

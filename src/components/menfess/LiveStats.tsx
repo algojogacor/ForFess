@@ -2,22 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Heart, Sparkles } from "lucide-react";
 
 interface StatsResponse {
   ok: true;
   posts: number | null;
+  likes?: number;
   checkedAt?: number;
 }
 
 /**
- * Strip statistik live di landing: jumlah menfess yang sudah tayang,
- * angka NYATA dari field media_count akun IG (bukan angka karangan).
- * Fail-open: kalau angka nggak bisa dicek, strip-nya tidak dirender —
- * lebih jujur daripada memamerkan palang palsu.
+ * Strip statistik live di landing: jumlah menfess yang sudah tayang
+ * (media_count) dan jumlah suka di post-post terbaru — angka NYATA dari
+ * Instagram, bukan angka karangan. Fail-open: kalau angka nggak bisa
+ * dicek, bagian itu tidak dirender — lebih jujur daripada memamerkan
+ * palang palsu.
  */
 export function LiveStats() {
   const [posts, setPosts] = useState<number | null>(null);
+  const [likes, setLikes] = useState<number | undefined>(undefined);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -25,7 +28,9 @@ export function LiveStats() {
     fetch("/api/stats", { cache: "no-store" })
       .then((res) => res.json() as Promise<StatsResponse>)
       .then((data) => {
-        if (!cancelled) setPosts(typeof data.posts === "number" ? data.posts : null);
+        if (cancelled) return;
+        setPosts(typeof data.posts === "number" ? data.posts : null);
+        setLikes(typeof data.likes === "number" ? data.likes : undefined);
       })
       .catch(() => {
         /* jaringan gagal — strip tidak muncul, bukan error untuk user */
@@ -49,9 +54,21 @@ export function LiveStats() {
         <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-soft">
           Sudah{" "}
           <strong className="text-xl font-bold tabular-nums text-ink">{posts}</strong>{" "}
-          {posts === 1 ? "menfess" : "menfess"} tayang
+          menfess tayang
         </span>
       </span>
+      {typeof likes === "number" ? (
+        <>
+          <span aria-hidden className="hidden h-4 w-0.5 bg-ink/15 sm:block" />
+          <span className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-soft">
+            <Heart className="size-3.5 fill-tomato text-tomato" aria-hidden />
+            <strong className="text-base font-bold tabular-nums text-tomato-deep">
+              {likes}
+            </strong>{" "}
+            suka di post terbaru
+          </span>
+        </>
+      ) : null}
       <Link
         href="/arsip"
         className="group inline-flex items-center gap-1 font-mono text-[12px] font-bold uppercase tracking-[0.18em] text-tomato-deep underline decoration-tomato/50 decoration-2 underline-offset-4 transition-colors hover:decoration-tomato"

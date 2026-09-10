@@ -21,12 +21,15 @@ function useMounted() {
 const NAV_LINKS = [
   { href: "/kirim", label: "Kirim" },
   { href: "/arsip", label: "Arsip" },
+  { href: "/acak", label: "Acak" },
   { href: "/about", label: "Tentang" },
   { href: "/privacy", label: "Privasi" },
   { href: "/terms", label: "Ketentuan" },
 ] as const;
 
-/** Logo Fess UNAIR — blok tinta dengan bintang kuning (motif anonimitas). */
+/** Logo Fess UNAIR — blok tinta dengan bintang kuning (motif anonimitas).
+ *  Hover: bintang berputar 120° (simetri tiga batangnya) — terasa "mendarat"
+ *  kembali ke bentuk yang sama, bukan sekadar miring. */
 function LogoMark({ className }: { className?: string }) {
   return (
     <span
@@ -36,7 +39,11 @@ function LogoMark({ className }: { className?: string }) {
         className
       )}
     >
-      <svg viewBox="0 0 64 64" className="size-5" fill="none">
+      <svg
+        viewBox="0 0 64 64"
+        className="size-5 transition-transform duration-500 ease-out group-hover:rotate-[120deg]"
+        fill="none"
+      >
         <path
           d="M32 10v44M12 21l40 22M52 21L12 43"
           stroke="#FFC800"
@@ -109,7 +116,7 @@ export function Navbar() {
           className="group flex items-center gap-2.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 rounded-lg"
           aria-label="Fess UNAIR — halaman utama"
         >
-          <LogoMark className="transition-transform duration-200 group-hover:-rotate-6" />
+          <LogoMark />
           <span className="text-lg font-bold tracking-tight">
             fess<span className="text-tomato">*</span>unair
           </span>

@@ -79,6 +79,8 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
+          {/* Tekstur kertas zine — sangat halus, di atas konten, tanpa interaksi */}
+          <div aria-hidden className="grain-overlay" />
           <Toaster position="bottom-center" offset={20} />
         </ThemeProvider>
       </body>

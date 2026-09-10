@@ -162,6 +162,16 @@ interface GraphMediaItem {
   media_url?: string;
   permalink?: string;
   timestamp?: string;
+  like_count?: number;
+}
+
+const MEDIA_FIELDS = "id,caption,media_url,permalink,timestamp,like_count";
+
+/** Normalisasi like_count — angka negatif/aneh dianggap tidak ada. */
+function toLikeCount(value: number | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined;
 }
 
 /**
@@ -172,7 +182,7 @@ interface GraphMediaItem {
 export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
   const data = await graphFetch<{ data?: GraphMediaItem[] }>(`${userId}/media`, {
     query: {
-      fields: "id,caption,media_url,permalink,timestamp",
+      fields: MEDIA_FIELDS,
       limit: String(limit),
       access_token: accessToken,
     },
@@ -186,6 +196,7 @@ export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
       mediaUrl: m.media_url,
       permalink: m.permalink,
       timestamp: m.timestamp,
+      likeCount: toLikeCount(m.like_count),
     }));
 }
 
@@ -203,7 +214,7 @@ export async function getMediaById(mediaId: string): Promise<ArchiveItem> {
 
   const data = await graphFetch<GraphMediaItem>(mediaId, {
     query: {
-      fields: "id,caption,media_url,permalink,timestamp",
+      fields: MEDIA_FIELDS,
       access_token: accessToken,
     },
   });
@@ -214,6 +225,7 @@ export async function getMediaById(mediaId: string): Promise<ArchiveItem> {
     mediaUrl: data.media_url,
     permalink: data.permalink,
     timestamp: data.timestamp,
+    likeCount: toLikeCount(data.like_count),
   };
 }
 

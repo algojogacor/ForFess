@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Link2, Share2 } from "lucide-react";
+import { Check, Link2, Quote, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { SITE_URL } from "@/constants";
 
 /**
  * Tombol aksi di halaman /fess/[id]: bagikan (Web Share API dengan
- * fallback clipboard) dan salin tautan. Semua feedback pakai state
- * tombol + toast — tidak ada yang diam begitu saja.
+ * fallback clipboard), salin tautan, dan salin teks menfessnya.
+ * Semua feedback pakai state tombol + toast — tidak ada yang diam.
  */
 export function MenfessActions({ fessId, text }: { fessId: string; text: string }) {
   const pageUrl = `${SITE_URL}/fess/${fessId}`;
@@ -18,16 +18,13 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
 
   const [shared, setShared] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [textCopied, setTextCopied] = useState(false);
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(pageUrl);
+      await navigator.clipboard.writeText(value);
       return true;
     } catch {
-      toast.error("Gagal menyalin tautan", {
-        description:
-          "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
-      });
       return false;
     }
   };
@@ -45,21 +42,43 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
         // Gagal karena alasan lain → turun ke clipboard.
       }
     }
-    const ok = await copyToClipboard();
+    const ok = await copyToClipboard(pageUrl);
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.info("Browser kamu nggak dukung dialog share", {
         description: "Tautannya udah disalin ke clipboard — tinggal tempel di chat.",
       });
+    } else {
+      toast.error("Gagal menyalin tautan", {
+        description:
+          "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
+      });
     }
   };
 
   const handleCopy = async () => {
-    const ok = await copyToClipboard();
+    const ok = await copyToClipboard(pageUrl);
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error("Gagal menyalin tautan", {
+        description:
+          "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
+      });
+    }
+  };
+
+  const handleCopyText = async () => {
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setTextCopied(true);
+      setTimeout(() => setTextCopied(false), 2000);
+    } else {
+      toast.error("Gagal menyalin teks", {
+        description: "Browser memblokir akses clipboard. Blok teksnya manual, ya.",
+      });
     }
   };
 
@@ -101,6 +120,26 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
           </>
         )}
       </button>
+      {text ? (
+        <button
+          type="button"
+          onClick={() => void handleCopyText()}
+          aria-label={textCopied ? "Teks menfess tersalin" : "Salin teks menfess ini"}
+          className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3.5 py-2 text-[13px] font-bold uppercase tracking-wide transition-colors hover:bg-signal-soft"
+        >
+          {textCopied ? (
+            <>
+              <Check className="size-4 text-tomato-deep" aria-hidden />
+              Teks tersalin
+            </>
+          ) : (
+            <>
+              <Quote className="size-4" aria-hidden />
+              Salin teks
+            </>
+          )}
+        </button>
+      ) : null}
     </>
   );
 }

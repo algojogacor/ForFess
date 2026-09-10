@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import Link from "next/link";
 import {
+  ArrowDownWideNarrow,
   Check,
   ExternalLink,
   Eye,
+  Heart,
   Instagram,
-  Link2,
   RefreshCcw,
   Search,
   SearchX,
   Share2,
+  Shuffle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
@@ -123,9 +125,18 @@ function ItemCard({ item }: { item: ArchiveItem }) {
         </span>
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
-          {relative ? <span title={date}>{relative}</span> : date || "Tanpa tanggal"}
-        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+          {typeof item.likeCount === "number" ? (
+            <span
+              className="inline-flex items-center gap-1 font-bold tabular-nums text-tomato-deep"
+              title={`${item.likeCount} suka di Instagram`}
+            >
+              <Heart className="size-3 fill-current" aria-hidden />
+              {item.likeCount}
+            </span>
+          ) : null}
+          {relative ? <span title={date}>{relative}</span> : date ? <span>{date}</span> : "Tanpa tanggal"}
+        </div>
         <p className="flex-1 text-[15px] leading-relaxed text-ink-soft">
           {excerpt || "Tanpa caption."}
         </p>
@@ -208,6 +219,8 @@ export function ArchiveGrid() {
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  /** Urutan tampil: "recent" = terbaru dulu, "likes" = paling disukai dulu. */
+  const [sort, setSort] = useState<"recent" | "likes">("recent");
 
   const load = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -231,14 +244,33 @@ export function ArchiveGrid() {
     void load(false);
   }, [load]);
 
+  // Urutkan SEKALI setiap items/sort berubah — bukan di dalam render.
+  const sortedItems = useMemo(() => {
+    if (!items) return null;
+    if (sort !== "likes") return items;
+    return [...items].sort((a, b) => {
+      const likeDiff = (b.likeCount ?? -1) - (a.likeCount ?? -1);
+      if (likeDiff !== 0) return likeDiff;
+      // Seri? Yang lebih baru menang.
+      return new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime();
+    });
+  }, [items, sort]);
+
+  // Menu urut cuma muncul kalau data sukanya benar-benar ada —
+  // jangan menawarkan "paling disukai" lalu mengurutkan kosong.
+  const hasLikeData = useMemo(
+    () => (items ?? []).some((m) => typeof m.likeCount === "number"),
+    [items]
+  );
+
   // Filter klien-samping: cari di caption SEMUA post yang sudah dimuat
   // (tidak dibatasi halaman yang terlihat) — lebih berguna buat pencarian.
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
   const filtered =
-    items && searching
-      ? items.filter((item) => (item.caption ?? "").toLowerCase().includes(q))
-      : items;
+    sortedItems && searching
+      ? sortedItems.filter((item) => (item.caption ?? "").toLowerCase().includes(q))
+      : sortedItems;
 
   if (loading) {
     return (
@@ -294,34 +326,83 @@ export function ArchiveGrid() {
             "data live dari Instagram"
           )}
         </p>
-        <button
-          type="button"
-          onClick={() => void load(true)}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-signal-soft disabled:opacity-50"
-        >
-          <RefreshCcw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
-          Muat ulang
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/acak"
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-signal-soft"
+          >
+            <Shuffle className="size-3.5" aria-hidden />
+            Kartu acak
+          </Link>
+          <button
+            type="button"
+            onClick={() => void load(true)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-signal-soft disabled:opacity-50"
+          >
+            <RefreshCcw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+            Muat ulang
+          </button>
+        </div>
       </div>
 
       {/* Pencarian klien-samping di atas post yang sudah dimuat */}
-      <div className="relative max-w-md">
-        <Search
-          className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
-          aria-hidden
-        />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setVisibleCount(PAGE_SIZE);
-          }}
-          placeholder={`Cari teks di ${items.length} post ini…`}
-          aria-label="Cari menfess di arsip yang dimuat"
-          className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+            placeholder={`Cari teks di ${items.length} post ini…`}
+            aria-label="Cari menfess di arsip yang dimuat"
+            className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
+          />
+        </div>
+
+        {/* Toggle urutan: terbaru / paling disukai — hanya jika data suka tersedia */}
+        {hasLikeData ? (
+          <div
+            role="group"
+            aria-label="Urutkan arsip"
+            className="flex items-center gap-1 rounded-xl border-2 border-ink bg-paper-raised p-1"
+          >
+            <ArrowDownWideNarrow className="mx-1.5 size-3.5 text-ink-faint" aria-hidden />
+            {(
+              [
+                { value: "recent", label: "Terbaru" },
+                { value: "likes", label: "Paling disukai" },
+              ] as const
+            ).map((opt) => {
+              const active = sort === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setSort(opt.value);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  aria-pressed={active}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors",
+                    active
+                      ? "bg-signal text-ink-fixed shadow-[2px_2px_0_0_var(--hard-soft)]"
+                      : "text-ink-soft hover:bg-ink/5"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {searching && (filtered?.length ?? 0) === 0 ? (

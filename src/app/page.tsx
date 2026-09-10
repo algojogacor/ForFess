@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { Reveal } from "@/components/ui/Reveal";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { QuotaStatus } from "@/components/menfess/QuotaStatus";
 import { LiveStats } from "@/components/menfess/LiveStats";
@@ -193,7 +194,7 @@ export default function LandingPage() {
 
       {/* ==== Cara kerja: tiga langkah dengan ritme offset ==== */}
       <section id="cara-kerja" className="scroll-mt-20 border-t-2 border-ink bg-paper">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <Reveal className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-tomato">
@@ -230,12 +231,12 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
-        </div>
+        </Reveal>
       </section>
 
       {/* ==== Aturan: section blok kontras (tinta di terang, lebih gelap di gelap) ==== */}
       <section className="border-y-2 border-ink bg-inverse text-inverse-fg">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <Reveal className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_1.6fr] lg:gap-16">
             <div>
               <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-signal">
@@ -266,12 +267,12 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ==== FAQ: pertanyaan yang memang sering ditanya ==== */}
       <section id="faq" className="scroll-mt-20 bg-paper">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <Reveal className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_1.8fr] lg:gap-16">
             <div>
               <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-tomato">
@@ -318,7 +319,7 @@ export default function LandingPage() {
               ))}
             </Accordion>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Data terstruktur FAQPage — membantu Google menampilkan FAQ langsung di hasil pencarian */}

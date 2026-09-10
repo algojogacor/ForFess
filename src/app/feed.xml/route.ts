@@ -7,7 +7,7 @@
  * Fail-open: kalau Graph API gagal, tetap keluarkan feed channel yang
  * valid (kosong) — bukan 500. Reader RSS akan menampilkan channel saja.
  */
-import { listRecentMedia } from "@/lib/instagram";
+import { getArsipItems } from "@/lib/media-pool";
 import { excerptFromCaption } from "@/lib/caption";
 import { IG_HANDLE, SITE_URL } from "@/constants";
 
@@ -29,8 +29,9 @@ export async function GET() {
   let itemsXml = "";
 
   try {
-    const items = await listRecentMedia(MAX_FEED_ITEMS);
-    itemsXml = items
+    // Pakai pool bersama (cache 5 menit) — hemat kuota Graph API.
+    const result = await getArsipItems(MAX_FEED_ITEMS);
+    itemsXml = (result?.items ?? [])
       .map((item) => {
         const text = excerptFromCaption(item.caption, 500);
         const title = excerptFromCaption(item.caption, 80) || "Menfess tanpa teks";

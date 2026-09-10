@@ -11,7 +11,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, ExternalLink, Instagram } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, Heart, Instagram } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -137,6 +137,15 @@ export default async function FessDetailPage({ params }: PageProps) {
                 <Instagram className="size-3.5" aria-hidden />
                 {IG_HANDLE}
               </span>
+              {typeof media.likeCount === "number" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 font-bold normal-case tracking-normal text-tomato-deep"
+                  title={`${media.likeCount} suka di Instagram`}
+                >
+                  <Heart className="size-3.5 fill-current" aria-hidden />
+                  {media.likeCount} suka
+                </span>
+              ) : null}
               <span className="ml-auto inline-flex items-center gap-1.5 normal-case tracking-normal">
                 <span aria-hidden className="text-signal-deep">*</span>
                 Anonim

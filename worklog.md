@@ -222,3 +222,38 @@ Stage Summary:
 - Keputusan penting: share arsip kini membagikan URL situs lokal (bukan IG) supaya OG image kartu ikut tampil; kartu tanpa teks → noindex.
 - Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja). media_count & /media TERBUKTI jalan dgn token sekarang.
 - Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; halaman "acah"/random kartu; multi-brand constants; cache-header/ISR utk /fess/[id]; regenerasi token IG + DRY_RUN=false saat produksi.
+
+---
+
+Task ID: 12
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — halaman /acak (kocok kartu), like counts end-to-end, cache bersama, polish zine
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, console bersih, hanya content_publishing_limit fail-open yang known). QA agent-browser awal: landing/kirim/arsip aman → lanjut fitur baru.
+- MEDIA POOL BERSAMA (refactor arsitektur): lib baru src/lib/media-pool.ts — SATU cache in-memory daftar 50 post terakhir (TTL 5 menit + anti thundering-herd via inflight guard + stale fallback) yang melayani /api/arsip, /api/acak, /api/stats, dan /feed.xml sekaligus. Dulu tiap route punya cache sendiri (boros kuota Graph); kini 1x fetch per 5 menit. getArsipItems / pickRandomMedia(excludeId) / getRecentLikesTotal. feed.xml refactor ke pool.
+- HALAMAN /ACAK "KOCOK KARTU" (fitur utama ronde ini):
+  - API GET /api/acak: pilih 1 post acak dari pool, param ?exclude=<id> biar kartu yang sama nggak muncul 2x berturut-turut (kalau masih ada kandidat lain), Cache-Control no-store (hasilnya memang harus beda tiap request), fail-open 200 {item:null, reason}.
+  - Halaman /acak (server, metadata noindex): heading "Kocok. Baca. Kaget." + RandomFess client component.
+  - RandomFess: deck 3 kartu (2 kartu "gacoan" di belakang ikut miring saat spinning), kartu utama = gambar asli IG (fallback PostPreview kalau mediaUrl kosong), label "ACAK" nempel di tepi atas kartu (posisi -top-3 — BUG DITEMUKAN: awalnya top-4 di dalam kartu, menutupi header brand kartu IG), baris meta (♥ suka + waktu relatif + Halaman kartu + Bagikan + link IG), tombol KOCOK signal besar dengan spinner, shortcut keyboard K (diabaikan kalau lagi ngetik di input/modifier), jeda minimal 500ms biar animasi kocok terasa, guard spinningRef anti double-request, state degrade: empty ("kirim yang pertama, yuk") vs unavailable ("arsip lagi nggak bisa dijangkau") + alert + retry.
+  - Entrypoints: navbar (desktop+mobile) link "Acak", tombol "Kartu acak" di bar kontrol arsip, link "Kartu acak" di footer. /acak sengaja noindex (kartu individual tetap terindeks via /fess/[id]).
+- LIKE COUNTS END-TO-END (data nyata dari IG, honest — undefined = tampil sebagai tidak ada, bukan nol karangan):
+  - instagram.ts: fields += like_count, normalisasi toLikeCount (negatif/aneh → undefined); listRecentMedia & getMediaById sama-sama mengembalikan likeCount.
+  - ArchiveGrid: chip ♥ tomat (tabular-nums, title tooltip) di baris meta kartu; SORT TOGGLE baru "Terbaru | Paling disukai" (segmented mono, aria-pressed, hanya muncul kalau minimal 1 item punya data suka; sort via useMemo, tie-break terbaru); responsif: search full-width di mobile, toggle di baris sendiri.
+  - /fess/[id]: "♥ n suka" di panel metadata (bold tomat).
+  - /api/stats: + likes (jumlah suka pool via getRecentLikesTotal — undefined kalau 1 pun item tak punya data); LiveStats: "♥ n suka di post terbaru" dipisah divider tipis, hidden kalau tak tersedia.
+- MENFESSACTIONS: tombol ketiga "Salin teks" (ikon Quote) — salin teks menfess ke clipboard, feedback "TEKS TERSALIN" + error toast spesifik kalau clipboard diblokir (semua path punya pesan, tidak ada yang diam).
+- CACHE HEADERS CDN: /api/arsip & /api/stats → public, s-maxage=180, stale-while-revalidate=600 (respons sukses/cache-lama); no-store saat data kosong; /api/acak no-store; /feed.xml sudah ada dari ronde lalu.
+- STYLING DETAILS (mandat polish):
+  - Grain overlay zine: .grain-overlay fixed inset-0 z-90 pointer-events-none, SVG feTurbulence desaturasi tile 160px, opacity 0.05 terang / 0.07 gelap, hidden kalau prefers-reduced-motion — dipasang di layout (setelah Footer, sebelum Toaster).
+  - Scroll reveal: util .reveal/.is-visible (opacity+translateY, delay via --reveal-delay, force-visible di reduced-motion) + komponen Reveal (client) dengan pola aman: SSR/no-JS/reduced-motion → langsung terlihat; elemen di bawah viewport disembunyikan HANYA setelah mount (rAF, hindari set-state-in-effect lint) lalu dimunculkan sekali via IntersectionObserver; elemen yang sudah kelihatan tidak pernah berkedip; className wrapper tetap digabung (cn). Dipasang di 3 section landing (cara-kerja, aturan, FAQ).
+  - Logo navbar: bintang hover rotate 120° (simetri tiga batang — "mendarat" ke bentuk sama), 500ms ease-out.
+  - Keyframe .animate-shuffle (jitter rotasi/translate 0.5s) untuk kartu saat dikocok; didaftarkan sebagai --animate-shuffle di @theme.
+- BUG QA & FIX: (1) badge ACAK menutupi header kartu → dipindah ke tepi atas kartu; overflow-hidden article melar -> badge jadi sibling di container deck. (2) ArchiveGrid search input gepeng di 390px → flex-col mobile / sm:flex-row. (3) [Catatan proses, bukan bug app] klik native agent-browser pada tombol submit di tepi bawah viewport mobile tidak mendarat — klik via eval JS membuktikan pipeline submit normal (POST 200 + panel sukses + riwayat).
+- QA agent-browser lengkap: /acak light+dark desktop & 390px (deck, badge, meta, KOCOK, hint kbd, shortcut K jalan), sort toggle klik → "PALING DISUKAI" aktif, chip ♥ muncul di kartu arsip & /fess/[id] & LiveStats landing, Salin teks → "TEKS TERSALIN", golden path /kirim mobile dark (submit → panel sukses + Kiriman kamu muncul), grain + reveal tidak mengganggu keterbacaan, semua section landing terlihat setelah scroll (tidak ada kontene stuck-hidden), headers cache terverifikasi via curl, semua route 200 + 404 benar, lint akhir 0 error 0 warning. dev.log bersih (hanya known issue kuota IG).
+
+Stage Summary:
+- VERIFIED: halaman /acak end-to-end (data IG nyata), like counts di 4 permukaan (arsip/sort/kartu/landing), cache pool bersama menghemat kuota Graph, CDN cache headers, grain zine + scroll reveal + micro-interactions — semua lolos QA light/dark desktop & mobile.
+- Keputusan penting: /acak noindex & no-store; sort "paling disukai" hanya muncul saat data suka ada (jujur, bukan fitur mati); likes undefined tidak pernah ditampilkan sebagai 0 karangan (kecuali IG benar-benar melapor 0).
+- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dengan token fresh; MENFESS_DRY_RUN masih true (disengaja untuk QA). Reveal bergantung JS — tanpa JS konten langsung tampil normal (by design).
+- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; simpan riwayat kiriman ke database (Prisma) untuk statistik agregat; share card sebagai gambar (canvas → PNG); multi-brand constants; regenerasi token IG + DRY_RUN=false saat produksi.

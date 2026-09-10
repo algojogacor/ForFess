@@ -96,6 +96,8 @@ export interface ArchiveItem {
   mediaUrl?: string;
   permalink?: string;
   timestamp?: string;
+  /** Jumlah suka; undefined = tidak bisa diambil (jangan tampilkan, jangan karangan). */
+  likeCount?: number;
 }
 
 /** Sumber data arsip: live = dari IG, stale = cache lama, unavailable = tidak ada. */
