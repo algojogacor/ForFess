@@ -11,7 +11,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto border-t-2 border-ink bg-ink text-paper">
+    <footer className="mt-auto border-t-2 border-ink bg-inverse text-inverse-fg">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           {/* Brand + disclaimer */}
@@ -19,11 +19,11 @@ export function Footer() {
             <p className="text-2xl font-bold tracking-tight">
               fess<span className="text-signal">*</span>unair
             </p>
-            <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-paper/70">
+            <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-inverse-fg/70">
               Platform menfess anonim buat warga UNAIR. Tulis apa yang belum
               kamu bilang — sisanya biar tanda bintang yang bicara.
             </p>
-            <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-paper/50">
+            <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-inverse-fg/50">
               Bukan akun resmi dan bukan bagian dari Universitas Airlangga.
               Semua isian menfess adalah tanggung jawab pengirimnya.
             </p>
@@ -44,7 +44,7 @@ export function Footer() {
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="text-paper/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
+                    className="text-inverse-fg/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
                   >
                     {l.label}
                   </Link>
@@ -62,7 +62,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/privacy"
-                  className="text-paper/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
+                  className="text-inverse-fg/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
                 >
                   Kebijakan privasi
                 </Link>
@@ -70,7 +70,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/terms"
-                  className="text-paper/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
+                  className="text-inverse-fg/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
                 >
                   Ketentuan layanan
                 </Link>
@@ -80,7 +80,7 @@ export function Footer() {
                   href={IG_PROFILE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-paper/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
+                  className="inline-flex items-center gap-2 text-inverse-fg/80 underline-offset-4 transition-colors hover:text-signal hover:underline"
                 >
                   <Instagram className="size-4" aria-hidden />
                   {IG_HANDLE}
@@ -91,7 +91,7 @@ export function Footer() {
         </div>
 
         <div
-          className="mt-10 flex flex-col gap-1 border-t border-paper/20 pt-5 font-mono text-[12px] text-paper/50 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-10 flex flex-col gap-1 border-t border-inverse-fg/20 pt-5 font-mono text-[12px] text-inverse-fg/50 sm:flex-row sm:items-center sm:justify-between"
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0px)" }}
         >
           <span>

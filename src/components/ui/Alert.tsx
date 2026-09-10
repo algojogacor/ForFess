@@ -13,12 +13,12 @@ const VARIANT_STYLES: Record<
   { box: string; icon: React.ReactNode; label: string }
 > = {
   success: {
-    box: "border-emerald-800 bg-emerald-50 text-emerald-950",
+    box: "border-emerald-800 bg-emerald-50 text-emerald-950 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-100",
     icon: <CheckCircle2 className="size-5 shrink-0" aria-hidden />,
     label: "Berhasil",
   },
   error: {
-    box: "border-tomato-deep bg-[#FBEAE3] text-[#7A2A12]",
+    box: "border-tomato-deep bg-[#FBEAE3] text-[#7A2A12] dark:bg-[#33150c] dark:text-[#ffbfa8]",
     icon: <XCircle className="size-5 shrink-0" aria-hidden />,
     label: "Gagal",
   },

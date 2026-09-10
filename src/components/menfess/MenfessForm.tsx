@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
   Loader2,
   SendHorizonal,
@@ -9,6 +8,11 @@ import {
   ExternalLink,
   PartyPopper,
   Eye,
+  History,
+  Trash2,
+  Share2,
+  Link2,
+  Check,
 } from "lucide-react";
 import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL } from "@/constants";
 import { Button } from "@/components/ui/Button";
@@ -27,10 +31,16 @@ interface SuccessInfo {
   dryRun?: boolean;
 }
 
+/** Key localStorage untuk draf menfess — tersimpan di perangkat, bukan server. */
+const DRAFT_KEY = "fess-unair:menfess-draft:v1";
+
 /**
  * Form kirim menfess: textarea + captcha Turnstile + pratinjau kartu live.
  * Semua feedback (sukses/error/rate-limit) ditampilkan spesifik dan
  * manusiawi — bukan "Something went wrong".
+ *
+ * Ekstra: draf tersimpan otomatis di localStorage (pulih saat kembali),
+ * shortcut Ctrl/⌘+Enter, serta bagikan/salin tautan setelah terkirim.
  */
 export function MenfessForm() {
   const [content, setContent] = useState("");
@@ -39,7 +49,12 @@ export function MenfessForm() {
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [restorableDraft, setRestorableDraft] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "shared">("idle");
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  /** Guard: jangan simpan draf sebelum draft lama selesai dibaca. */
+  const draftLoadedRef = useRef(false);
 
   const submitting = status === "submitting";
   const trimmedLength = content.trim().length;
@@ -55,6 +70,54 @@ export function MenfessForm() {
     const timer = setTimeout(() => setCountdown((s) => s - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // Baca draf lama sekali saat mount — jangan auto-isi; tawarkan lewat banner.
+  // (dibaca via timeout agar setState tidak sinkron di dalam effect)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(DRAFT_KEY);
+        if (saved && saved.trim().length >= MIN_CHARS) {
+          setRestorableDraft(saved);
+        }
+      } catch {
+        /* localStorage bisa saja diblokir — draf adalah bonus, bukan syarat */
+      }
+      draftLoadedRef.current = true;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Simpan draf otomatis (debounce 400ms) saat user mengetik.
+  useEffect(() => {
+    if (!draftLoadedRef.current) return;
+    const timer = setTimeout(() => {
+      try {
+        if (content.trim().length > 0) {
+          window.localStorage.setItem(DRAFT_KEY, content);
+        } else {
+          window.localStorage.removeItem(DRAFT_KEY);
+        }
+      } catch {
+        /* abaikan — penyimpanan penuh/diblokir tidak boleh mengganggu menulis */
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [content]);
+
+  const restoreDraft = () => {
+    if (restorableDraft) setContent(restorableDraft.slice(0, MAX_CHARS));
+    setRestorableDraft(null);
+  };
+
+  const discardDraft = () => {
+    try {
+      window.localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* abaikan */
+    }
+    setRestorableDraft(null);
+  };
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -88,6 +151,12 @@ export function MenfessForm() {
         }
 
         if (data.ok) {
+          // Sukses → draf tidak diperlukan lagi.
+          try {
+            window.localStorage.removeItem(DRAFT_KEY);
+          } catch {
+            /* abaikan */
+          }
           setSuccess({ permalink: data.permalink, dryRun: data.dryRun });
           setStatus("success");
           return;
@@ -108,11 +177,50 @@ export function MenfessForm() {
     [canSubmit, content, captchaToken]
   );
 
+  // Shortcut Ctrl/⌘ + Enter untuk kirim dari textarea.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (canSubmit && countdown === 0) {
+        formRef.current?.requestSubmit();
+      }
+    }
+  };
+
   const resetForm = () => {
     setContent("");
     setStatus("idle");
     setErrorMessage(null);
     setSuccess(null);
+    setShareState("idle");
+  };
+
+  const handleCopyLink = async () => {
+    const url = success?.permalink ?? IG_PROFILE_URL;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareState("copied");
+    } catch {
+      /* clipboard API bisa diblokir — biarkan tombol diam */
+    }
+  };
+
+  const handleShare = async () => {
+    const url = success?.permalink ?? IG_PROFILE_URL;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Fess UNAIR",
+          text: "Menfessku udah tayang di @fess_unair ✳️",
+          url,
+        });
+        setShareState("shared");
+      } catch {
+        /* user batal share — bukan error */
+      }
+    } else {
+      await handleCopyLink();
+    }
   };
 
   // ---- Panel sukses menggantikan seluruh form ----
@@ -121,7 +229,7 @@ export function MenfessForm() {
       <div className="animate-pop rounded-2xl border-2 border-ink bg-paper-raised p-6 sm:p-10">
         <div className="flex flex-col items-center gap-4 text-center">
           <span className="grid size-16 place-items-center rounded-2xl border-2 border-ink bg-signal">
-            <PartyPopper className="size-8" aria-hidden />
+            <PartyPopper className="size-8 text-ink-fixed" aria-hidden />
           </span>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Terkirim! Menfess kamu meluncur ke @fess_unair
@@ -171,6 +279,44 @@ export function MenfessForm() {
               Tulis lagi
             </Button>
           </div>
+
+          {/* Aksi lanjutan: bagikan / salin tautan */}
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleShare()}
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3.5 py-2 text-[13px] font-semibold transition-colors hover:bg-signal-soft"
+            >
+              {shareState === "shared" ? (
+                <>
+                  <Check className="size-4 text-tomato-deep" aria-hidden />
+                  Tautan terbagikan
+                </>
+              ) : (
+                <>
+                  <Share2 className="size-4" aria-hidden />
+                  Bagikan kabar ini
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyLink()}
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-paper-raised px-3.5 py-2 text-[13px] font-semibold transition-colors hover:bg-signal-soft"
+            >
+              {shareState === "copied" ? (
+                <>
+                  <Check className="size-4 text-tomato-deep" aria-hidden />
+                  Tautan tersalin
+                </>
+              ) : (
+                <>
+                  <Link2 className="size-4" aria-hidden />
+                  Salin tautan
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -179,7 +325,12 @@ export function MenfessForm() {
   // ---- Form utama: dua kolom di desktop, menumpuk di mobile ----
   return (
     <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-5"
+        noValidate
+      >
         {/* Honeypot anti-bot — tersembunyi dari manusia; bot iseng mengisinya */}
         <input
           ref={honeypotRef}
@@ -203,7 +354,37 @@ export function MenfessForm() {
           </Alert>
         ) : null}
 
-        <div className="rounded-2xl border-2 border-ink bg-paper-raised shadow-[6px_6px_0_0_rgba(22,19,16,0.12)]">
+        {/* Banner pulihkan draf — hanya saat form masih kosong */}
+        {restorableDraft && status === "idle" && trimmedLength === 0 ? (
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-dashed border-signal-deep bg-signal-soft/50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2.5">
+              <History className="mt-0.5 size-4 shrink-0 text-signal-deep" aria-hidden />
+              <p className="text-[13px] leading-relaxed text-ink-soft">
+                Ada draf yang belum terkirim dari kunjungan sebelumnya.
+                Tersimpan di perangkat kamu — nggak pernah dikirim ke server.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="rounded-lg border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wide transition-colors hover:bg-signal"
+              >
+                Pulihkan
+              </button>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wide text-ink-faint transition-colors hover:text-tomato-deep"
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                Hapus
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border-2 border-ink bg-paper-raised shadow-[6px_6px_0_0_var(--hard-soft)]">
           <label htmlFor="menfess-content" className="sr-only">
             Isi menfess kamu
           </label>
@@ -211,6 +392,7 @@ export function MenfessForm() {
             id="menfess-content"
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+            onKeyDown={handleKeyDown}
             placeholder="Tulis di sini. Curhat, kabar, pengakuan, atau sekadar bilang semangat — namamu nggak akan ikut ke mana-mana."
             rows={9}
             disabled={submitting}
@@ -218,7 +400,7 @@ export function MenfessForm() {
           />
           <div className="flex items-center justify-between gap-3 border-t-2 border-dashed border-ink/15 px-4 py-3">
             <p className="font-mono text-[12px] uppercase tracking-wider text-ink-faint">
-              Tanpa nama · Tanpa login
+              Tanpa nama · Tanpa login · Draf auto-tersimpan
             </p>
             <CharCounter value={content} />
           </div>
@@ -247,7 +429,13 @@ export function MenfessForm() {
           </Button>
           <p className="text-[13px] leading-snug text-ink-faint sm:max-w-[230px]">
             Sekali kirim, langsung tayang tanpa moderasi. Baca ulang dulu
-            sebelum tekan, ya.
+            sebelum tekan, ya.{" "}
+            <span className="whitespace-nowrap">
+              Bisa juga tekan <kbd className="kbd-chip">Ctrl</kbd>{" "}
+              <span aria-hidden>+</span>{" "}
+              <kbd className="kbd-chip">Enter</kbd>
+            </span>
+            .
           </p>
         </div>
       </form>
@@ -261,7 +449,7 @@ export function MenfessForm() {
         {trimmedLength > 0 ? (
           <PostPreview
             text={content}
-            className="animate-pop rounded-2xl border-2 border-ink shadow-[6px_6px_0_0_rgba(22,19,16,0.12)]"
+            className="animate-pop rounded-2xl border-2 border-ink shadow-[6px_6px_0_0_var(--hard-soft)]"
           />
         ) : (
           <div

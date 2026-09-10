@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SITE_URL } from "@/constants";
 
 // Font identitas: Space Grotesk (display + body) & Space Mono (label/ticker).
@@ -52,7 +53,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F7F2E8",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F2E8" },
+    { media: "(prefers-color-scheme: dark)", color: "#14110D" },
+  ],
 };
 
 export default function RootLayout({
@@ -65,9 +69,11 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${spaceMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col font-sans`}
       >
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

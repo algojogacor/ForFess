@@ -71,10 +71,10 @@ export default function LandingPage() {
               {TICKER_ITEMS.map((item) => (
                 <span
                   key={`${copy}-${item}`}
-                  className="flex items-center font-mono text-[13px] font-bold uppercase tracking-[0.15em] text-ink"
+                  className="flex items-center font-mono text-[13px] font-bold uppercase tracking-[0.15em] text-ink-fixed"
                 >
                   <span className="px-5">{item}</span>
-                  <span className="text-tomato">*</span>
+                  <span className="text-[#c23f1b]">*</span>
                 </span>
               ))}
             </div>
@@ -144,7 +144,7 @@ export default function LandingPage() {
               <PostPreview
                 text={SAMPLE_A}
                 ariaLabel="Contoh kartu menfess tentang kelulusan sidang skripsi"
-                className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_rgba(22,19,16,0.9)] transition-all duration-300 hover:rotate-0 hover:shadow-[10px_10px_0_0_rgba(22,19,16,0.9)]"
+                className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_var(--hard-strong)] transition-all duration-300 hover:rotate-0 hover:shadow-[10px_10px_0_0_var(--hard-strong)]"
               />
               <PostPreview
                 text={SAMPLE_B}
@@ -198,8 +198,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ==== Aturan: section tinta kontras ==== */}
-      <section className="border-y-2 border-ink bg-ink text-paper">
+      {/* ==== Aturan: section blok kontras (tinta di terang, lebih gelap di gelap) ==== */}
+      <section className="border-y-2 border-ink bg-inverse text-inverse-fg">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_1.6fr] lg:gap-16">
             <div>
@@ -209,7 +209,7 @@ export default function LandingPage() {
               <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
                 Empat hal yang perlu kamu tahu sebelum kirim.
               </h2>
-              <p className="mt-5 text-[15px] leading-relaxed text-paper/70">
+              <p className="mt-5 text-[15px] leading-relaxed text-inverse-fg/70">
                 Nggak banyak aturan, tapi semuanya serius. Dibuat supaya
                 platform ini tetap nyaman buat semua orang.
               </p>
@@ -218,13 +218,13 @@ export default function LandingPage() {
               {RULES.map((rule, i) => (
                 <li
                   key={rule.title}
-                  className="border-t border-paper/25 pt-5 transition-colors duration-200 hover:border-signal"
+                  className="border-t border-inverse-fg/25 pt-5 transition-colors duration-200 hover:border-signal"
                 >
                   <span className="font-mono text-[13px] font-bold text-signal">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <h3 className="mt-2 text-lg font-bold leading-snug">{rule.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-paper/70">
+                  <p className="mt-2 text-[15px] leading-relaxed text-inverse-fg/70">
                     {rule.body}
                   </p>
                 </li>
@@ -239,16 +239,16 @@ export default function LandingPage() {
       <section className="bg-signal">
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:py-20">
           <div>
-            <h2 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+            <h2 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight text-ink-fixed sm:text-4xl">
               Sudah ada yang pengen kamu keluarin hari ini?
             </h2>
-            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink/75">
+            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-fixed/75">
               Form-nya buka 24 jam, gratis, dan nggak nanya siapa kamu.{" "}
               <a
                 href={IG_PROFILE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold underline decoration-ink/40 underline-offset-4 hover:decoration-ink"
+                className="font-semibold underline decoration-ink-fixed/40 underline-offset-4 hover:decoration-ink-fixed"
               >
                 {IG_HANDLE}
               </a>{" "}

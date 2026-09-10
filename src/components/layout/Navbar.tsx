@@ -2,10 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useSyncExternalStore, useState } from "react";
+import { Menu, Moon, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
+
+/** Deteksi mount tanpa setState-in-effect (aman hydration & lint). */
+const emptySubscribe = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
 
 const NAV_LINKS = [
   { href: "/kirim", label: "Kirim" },
@@ -34,6 +45,50 @@ function LogoMark({ className }: { className?: string }) {
         />
       </svg>
     </span>
+  );
+}
+
+/** Tombol toggle tema terang/gelap — ikut mode system sebelum interaksi pertama. */
+export function ThemeToggle({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useMounted();
+
+  const isDark = mounted && resolvedTheme === "dark";
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={
+        mounted
+          ? isDark
+            ? "Aktifkan mode terang"
+            : "Aktifkan mode gelap"
+          : "Ganti tema"
+      }
+      title={mounted ? (isDark ? "Mode terang" : "Mode gelap") : "Ganti tema"}
+      className={cn(
+        "grid size-10 place-items-center rounded-lg border-2 border-ink bg-paper-raised transition-transform duration-150 hover:-rotate-6 active:rotate-6",
+        className
+      )}
+    >
+      <span className="relative block size-5">
+        <Sun
+          aria-hidden
+          className={cn(
+            "absolute inset-0 size-5 transition-all duration-300",
+            isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-50 opacity-0"
+          )}
+        />
+        <Moon
+          aria-hidden
+          className={cn(
+            "absolute inset-0 size-5 transition-all duration-300",
+            isDark ? "rotate-90 scale-50 opacity-0" : "rotate-0 scale-100 opacity-100"
+          )}
+        />
+      </span>
+    </button>
   );
 }
 
@@ -75,31 +130,38 @@ export function Navbar() {
                   active ? "text-ink font-bold" : "text-ink-soft"
                 )}
               >
-                <span className={cn(active && "bg-signal px-1")}>
+                <span className={cn(active && "bg-signal px-1 text-ink-fixed")}>
                   {link.label}
                 </span>
               </Link>
             );
           })}
-          <Link
-            href="/kirim"
-            className={cn(buttonVariants({ variant: "signal", size: "sm" }), "ml-2")}
-          >
-            Kirim menfess
-          </Link>
+          {/* Toggle tema + CTA */}
+          <div className="ml-2 flex items-center gap-2">
+            <ThemeToggle />
+            <Link
+              href="/kirim"
+              className={cn(buttonVariants({ variant: "signal", size: "sm" }))}
+            >
+              Kirim menfess
+            </Link>
+          </div>
         </div>
 
-        {/* Tombol menu mobile */}
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label={open ? "Tutup menu" : "Buka menu"}
-          className="grid size-10 place-items-center rounded-lg border-2 border-ink bg-paper-raised md:hidden"
-        >
-          {open ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
+        {/* Tombol menu mobile + toggle tema */}
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-label={open ? "Tutup menu" : "Buka menu"}
+            className="grid size-10 place-items-center rounded-lg border-2 border-ink bg-paper-raised md:hidden"
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+        </div>
       </nav>
 
       {/* Panel mobile — slide turun dengan animasi rise */}

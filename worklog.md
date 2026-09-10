@@ -135,3 +135,33 @@ Stage Summary:
 - Project v1.0 COMPLETE & browser-verified
 - LANGKAH PRODUKSI (untuk owner): set MENFESS_DRY_RUN=false, isi NEXT_PUBLIC_TURNSTILE_SITE_KEY asli (0x...), pastikan IG_ACCESS_TOKEN fresh & valid, deploy Vercel + env vars sama
 - Ide pengembangan berikutnya: arsip menfess + database, moderasi opsional (queue), custom domain, multi-universitas (constants → konfigurasi per-brand)
+
+---
+
+Task ID: 9
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — mode gelap, draf otomatis, share/salin, pencarian arsip
+
+Work Log:
+- ASSESSMENT: proyek stabil (v1.0 + fitur arsip dari cron reviewer sebelumnya yang belum tercatat di worklog: /arsip, ArchiveGrid, api/arsip, listRecentMedia, not-found, error.tsx, sitemap.ts, text-sizing.ts). QA agent-browser: landing, /kirim (golden path dry-run OK), /arsip (empty state degrade OK), semua route 200. Fix 1 lint warning (unused eslint-disable di ArchiveGrid).
+- MODE GELAP (fitur terbesar ronde ini):
+  - globals.css ditulis ulang: semua warna brand jadi CSS variable (—paper, —ink, —signal, dst.) yang direferensi @theme inline → blok .dark cukup menukar nilai. Tema gelap "tinta malam": kertas #14110d, kartu #201a14, teks krem #efe8da, kuning signal TETAP #ffc800.
+  - Token baru: --ink-fixed (tinta selalu gelap, dipakai di atas permukaan kuning), --inverse/--inverse-fg (footer & section aturan: tinta di terang, lebih gelap dari latar di gelap — tidak menyilaukan), --hard-strong/--hard-soft (bayangan sticker via var → menggantikan semua rgba(22,19,16,…) hardcoded), --focus-ring.
+  - Utilitas dapat varian gelap: .bg-dotgrid, .text-outline, .marker-highlight (teks dipaksa tinta gelap di atas marker kuning), scrollbar, ::selection, kbd-chip (baru), color-scheme.
+  - A11y: ring fokus global 3px (ink di terang, kuning di gelap), prefers-reduced-motion mematikan marquee/pop/rise.
+  - ThemeProvider (next-themes, attribute=class, defaultTheme=system) dibungkus di layout; viewport themeColor dua media query.
+  - ThemeToggle di navbar (desktop + mobile, ikon Sun/Moon transisi rotasi, hydration-safe via useSyncExternalStore bukan setState-in-effect).
+  - Perbaikan kontras hasil QA visual: heading CTA band + ticker (bg kuning) pakai text-ink-fixed; asterisk ticker #c23f1b fixed; chip nav aktif text-ink-fixed; Alert success/error varian dark; TurnstileWidget ikut tema (theme param + re-render saat ganti tema) + varian dark untuk box scriptFailed.
+- FORM /kirim:
+  - Draf auto-save ke localStorage (key fess-unair:menfess-draft:v1, debounce 400ms) + banner pulihkan/hapus saat kembali dengan form kosong; draf dihapus saat submit sukses. Label "Draf auto-tersimpan" di bar bawah textarea.
+  - Shortcut Ctrl/⌘+Enter kirim (requestSubmit) + hint kbd-chip.
+  - Panel sukses: tombol "Bagikan kabar ini" (Web Share API, fallback salin) + "Salin tautan" (clipboard, feedback jadi "Tersalin"). Klaim di error.tsx soal teks tersisa kini benar-benar akurat lintas sesi.
+- ARSIP: pencarian klien-samping (filter caption case-insensitive di post termuat) + empty state "nggak ada yang cocok" + tombol bersihkan; hover shadow via var.
+- LINT FIX (Next 16 rule react-hooks/set-state-in-effect): Navbar mounted pattern → useSyncExternalStore; baca localStorage draf → setTimeout(0). SATU BUG SELAMA PENGERJAAN: useState terlanjur dihapus dari import Navbar → runtime error "useState is not defined", langsung diperbaiki & diverifikasi.
+- QA agent-browser lengkap: dark landing (hero/ticker/aturan/CTA/footer), light landing utuh, dark kirim + banner draf + pulihkan + submit sukses + salin tautan ("Tersalin"), dark arsip & about, mobile 390px dark OK, toggle bolak-balik light↔dark tersimpan, semua route 200 (404 page benar), lint 0/0. Sisa dev.log hanya error IG token lama (known issue, fail-open).
+
+Stage Summary:
+- VERIFIED: mode gelap penuh (brand zine terjaga: kuning signal selalu berpasangan tinta gelap), draf otomatis, shortcut, share/salin, pencarian arsip — semua lolos QA di kedua tema + mobile.
+- Keputusan penting: kartu IG (PostPreview/Satori) SENGAJA tetap terang di tema gelap = identik dengan hasil postingan asli.
+- Risiko/known issue (tetap): token IG "unknown error" dari sandbox (expired atau graph.facebook.com diblokir) → chip kuota & arsip degrade gracefully; verifikasi ulang di Vercel dengan token fresh. Draf menfess tersimpan plaintext di localStorage (hanya teks anonim, tanpa identitas — risiko rendah, disebut di banner).
+- Ide ronde berikutnya: tombol "bagikan" per-kartu arsip, toast global (sonner) untuk feedback salin, riwayat kiriman lokal ("Kiriman kamu"), lint defaultTheme=system vs light di landing, verifikasi Turnstile asli + MENFESS_DRY_RUN=false saat produksi.

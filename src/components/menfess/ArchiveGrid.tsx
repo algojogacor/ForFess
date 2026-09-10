@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { ExternalLink, Instagram, RefreshCcw } from "lucide-react";
+import {
+  ExternalLink,
+  Instagram,
+  RefreshCcw,
+  Search,
+  SearchX,
+} from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";
@@ -38,7 +44,7 @@ function ItemCard({ item }: { item: ArchiveItem }) {
   const date = formatDate(item.timestamp);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(22,19,16,0.85)]">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--hard-strong)]">
       <a
         href={item.permalink ?? IG_PROFILE_URL}
         target="_blank"
@@ -47,7 +53,6 @@ function ItemCard({ item }: { item: ArchiveItem }) {
         className="relative block aspect-square overflow-hidden border-b-2 border-ink bg-paper"
       >
         {item.mediaUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- URL CDN IG berumur pendek; next/image butuh konfigurasi domain yang terus berubah
           <img
             src={item.mediaUrl}
             alt={excerpt || "Kartu menfess di Instagram"}
@@ -110,6 +115,7 @@ export function ArchiveGrid() {
   const [fetchTime, setFetchTime] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -132,6 +138,13 @@ export function ArchiveGrid() {
   useEffect(() => {
     void load(false);
   }, [load]);
+
+  // Filter klien-samping: cari di caption post yang sudah dimuat.
+  const q = query.trim().toLowerCase();
+  const filtered =
+    items && q
+      ? items.filter((item) => (item.caption ?? "").toLowerCase().includes(q))
+      : items;
 
   if (loading) {
     return (
@@ -190,11 +203,43 @@ export function ArchiveGrid() {
         </button>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
-          <ItemCard key={item.id} item={item} />
-        ))}
+      {/* Pencarian klien-samping di atas post yang sudah dimuat */}
+      <div className="relative max-w-md">
+        <Search
+          className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
+          aria-hidden
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Cari teks di ${items.length} post ini…`}
+          aria-label="Cari menfess di arsip yang dimuat"
+          className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80"
+        />
       </div>
+
+      {filtered && filtered.length === 0 ? (
+        <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-dashed border-ink/25 bg-paper-raised/60 px-5 py-8">
+          <SearchX className="size-6 text-ink-faint" aria-hidden />
+          <p className="text-[15px] leading-relaxed text-ink-soft">
+            Nggak ada yang cocok dengan "{query}" di {items.length} post
+            terakhir. Coba kata kunci lain, atau cari langsung di akun{" "}
+            {IG_HANDLE}.
+          </p>
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="font-mono text-[12px] font-bold uppercase tracking-wider text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+          >
+            Bersihkan pencarian
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered?.map((item) => <ItemCard key={item.id} item={item} />)}
+        </div>
+      )}
     </div>
   );
 }

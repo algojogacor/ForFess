@@ -42,17 +42,28 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* == Identitas Fess UNAIR: kertas krem × tinta × kuning signal == */
-  --color-paper: #f7f2e8;
-  --color-paper-raised: #fffdf6;
-  --color-ink: #161310;
-  --color-ink-soft: #4a4437;
-  --color-ink-faint: #776d5b;
-  --color-signal: #ffc800;
-  --color-signal-deep: #e8ae00;
-  --color-signal-soft: #ffefb8;
-  --color-tomato: #e4572e;
-  --color-tomato-deep: #c23f1b;
+  /* == Identitas Fess UNAIR: kertas krem × tinta × kuning signal ==
+     Warna brand merujuk CSS variabel sehingga mode gelap cukup
+     menukar nilai variabelnya (lihat blok .dark di bawah). */
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-signal: var(--signal);
+  --color-signal-deep: var(--signal-deep);
+  --color-signal-soft: var(--signal-soft);
+  --color-tomato: var(--tomato);
+  --color-tomato-deep: var(--tomato-deep);
+
+  /* Tinta yang SELALU gelap — untuk teks/border di atas permukaan kuning
+     (kuning signal harus selalu dipasangkan dengan tinta gelap, di tema apa pun). */
+  --color-ink-fixed: var(--ink-fixed);
+
+  /* Blok "terbalik" (footer, section aturan): tinta di mode terang,
+     lebih gelap dari latar di mode gelap — tidak menyilaukan. */
+  --color-inverse: var(--inverse);
+  --color-inverse-fg: var(--inverse-fg);
 
   /* Motion: hanya yang punya tujuan */
   --animate-marquee: marquee 32s linear infinite;
@@ -88,8 +99,34 @@
   }
 }
 
+/* ===== Tema terang (default) ===== */
 :root {
+  color-scheme: light;
   --radius: 0.5rem;
+
+  /* Brand */
+  --paper: #f7f2e8;
+  --paper-raised: #fffdf6;
+  --ink: #161310;
+  --ink-soft: #4a4437;
+  --ink-faint: #776d5b;
+  --signal: #ffc800;
+  --signal-deep: #e8ae00;
+  --signal-soft: #ffefb8;
+  --tomato: #e4572e;
+  --tomato-deep: #c23f1b;
+  --ink-fixed: #161310;
+  --inverse: #161310;
+  --inverse-fg: #f7f2e8;
+
+  /* Bayangan "sticker" — hitam pekat di terang */
+  --hard-strong: rgba(22, 19, 16, 0.9);
+  --hard-soft: rgba(22, 19, 16, 0.14);
+
+  /* Ring fokus global */
+  --focus-ring: #161310;
+
+  /* shadcn */
   --background: #f7f2e8;
   --foreground: #161310;
   --card: #fffdf6;
@@ -124,6 +161,66 @@
   --sidebar-ring: #161310;
 }
 
+/* ===== Tema gelap — "tinta malam" =====
+   Prinsipnya inversi zine: kertas jadi tinta gelap hangat, tinta jadi
+   krem. Kuning signal TETAP kuning (identitas), tapi selalu dipasangkan
+   dengan teks tinta gelap (ink-fixed). */
+.dark {
+  color-scheme: dark;
+
+  --paper: #14110d;
+  --paper-raised: #201a14;
+  --ink: #efe8da;
+  --ink-soft: #b3a98f;
+  --ink-faint: #877b66;
+  --signal: #ffc800;
+  --signal-deep: #ffd23f;
+  --signal-soft: #3d310a;
+  --tomato: #ff6b3d;
+  --tomato-deep: #ff8355;
+  --ink-fixed: #161310;
+  --inverse: #0d0b08;
+  --inverse-fg: #efe8da;
+
+  --hard-strong: rgba(0, 0, 0, 0.85);
+  --hard-soft: rgba(0, 0, 0, 0.55);
+
+  --focus-ring: #ffc800;
+
+  --background: #14110d;
+  --foreground: #efe8da;
+  --card: #201a14;
+  --card-foreground: #efe8da;
+  --popover: #201a14;
+  --popover-foreground: #efe8da;
+  --primary: #ffc800;
+  --primary-foreground: #161310;
+  --secondary: #efe8da;
+  --secondary-foreground: #14110d;
+  --muted: #2a231b;
+  --muted-foreground: #877b66;
+  --accent: #322a1c;
+  --accent-foreground: #efe8da;
+  --destructive: #ff5c33;
+  --destructive-foreground: #1a0f09;
+  --border: rgba(239, 232, 218, 0.16);
+  --input: rgba(239, 232, 218, 0.24);
+  --ring: #ffc800;
+  --chart-1: #ffc800;
+  --chart-2: #ff6b3d;
+  --chart-3: #877b66;
+  --chart-4: #b3a98f;
+  --chart-5: #ffd23f;
+  --sidebar: #14110d;
+  --sidebar-foreground: #efe8da;
+  --sidebar-primary: #ffc800;
+  --sidebar-primary-foreground: #161310;
+  --sidebar-accent: #322a1c;
+  --sidebar-accent-foreground: #efe8da;
+  --sidebar-border: rgba(239, 232, 218, 0.16);
+  --sidebar-ring: #ffc800;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -138,6 +235,12 @@
   ::selection {
     background: #ffc800;
     color: #161310;
+  }
+
+  /* Ring fokus brand yang konsisten — semua elemen interaktif */
+  :where(a, button, [role="button"], input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 }
 
@@ -158,6 +261,13 @@
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+.dark * {
+  scrollbar-color: rgba(239, 232, 218, 0.3) transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(239, 232, 218, 0.25);
+  border-color: #14110d;
+}
 
 /* == Utilitas khas brand == */
 
@@ -165,6 +275,9 @@
 .bg-dotgrid {
   background-image: radial-gradient(rgba(22, 19, 16, 0.09) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+.dark .bg-dotgrid {
+  background-image: radial-gradient(rgba(239, 232, 218, 0.08) 1px, transparent 1px);
 }
 
 /* Garis-garis diagonal kuning ala tape peringatan */
@@ -180,14 +293,46 @@
 
 /* Teks outline ala poster */
 .text-outline {
-  -webkit-text-stroke: 2px #161310;
+  -webkit-text-stroke: 2px var(--ink);
   color: transparent;
 }
 
-/* Highlight marker kuning di belakang teks */
+/* Highlight marker kuning di belakang teks.
+   Di mode gelap teks di dalamnya dipaksa tinta gelap agar kontras
+   di atas kuning marker tetap terjaga. */
 .marker-highlight {
   background-image: linear-gradient(100deg, transparent 2%, #ffc800 2%, #ffc800 96%, transparent 96%);
   background-repeat: no-repeat;
   background-size: 100% 62%;
   background-position: 0 78%;
+}
+.dark .marker-highlight {
+  color: #161310;
+}
+
+/* Chip keyboard (Ctrl + Enter) untuk hint shortcut */
+.kbd-chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border: 1.5px solid var(--ink-faint);
+  border-bottom-width: 3px;
+  border-radius: 0.375rem;
+  font-family: var(--font-spacemono), monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  background: var(--paper-raised);
+}
+
+/* Hormati preferensi pengguna: kurangi gerakan */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

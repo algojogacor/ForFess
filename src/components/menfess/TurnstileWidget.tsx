@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { getTurnstileSiteKey, isTurnstileWidgetEnabled } from "@/lib/config";
 import { ShieldCheck } from "lucide-react";
 
@@ -41,6 +42,8 @@ export function TurnstileWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const [scriptFailed, setScriptFailed] = useState(false);
   const widgetEnabled = isTurnstileWidgetEnabled();
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === "dark" ? "dark" : "light";
 
   useEffect(() => {
     // Mode development: langsung set token placeholder.
@@ -68,7 +71,7 @@ export function TurnstileWidget({
         callback: (token) => onToken(token),
         "expired-callback": () => onToken(null),
         "error-callback": () => setScriptFailed(true),
-        theme: "light",
+        theme,
       });
     }
 
@@ -95,7 +98,8 @@ export function TurnstileWidget({
         }
       }
     };
-  }, [widgetEnabled]);
+    // theme di-deps: ganti tema akan me-render ulang widget dengan tema cocok.
+  }, [widgetEnabled, theme]);
 
   // Mode dev: tidak ada widget yang perlu dirender.
   if (!widgetEnabled) {
@@ -109,7 +113,7 @@ export function TurnstileWidget({
 
   if (scriptFailed) {
     return (
-      <p className="flex items-center gap-2 rounded-lg border-2 border-tomato-deep bg-[#FBEAE3] px-3.5 py-3 text-[13px] text-[#7A2A12]">
+      <p className="flex items-center gap-2 rounded-lg border-2 border-tomato-deep bg-[#FBEAE3] px-3.5 py-3 text-[13px] text-[#7A2A12] dark:bg-[#33150c] dark:text-[#ffbfa8]">
         <ShieldCheck className="size-4 shrink-0" aria-hidden />
         Widget verifikasi gagal dimuat. Muat ulang halaman, atau matikan
         pemblokir iklan lalu coba lagi.

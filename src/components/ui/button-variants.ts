@@ -9,11 +9,13 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /** CTA utama — kuning signal dengan shadow tinta. */
+        /** CTA utama — kuning signal dengan shadow tinta.
+         *  Teks & border selalu tinta gelap (ink-fixed): kuning harus
+         *  dipasangkan dengan tinta gelap di tema apa pun. */
         signal:
-          "bg-signal text-ink border-2 border-ink shadow-[4px_4px_0_0_#161310] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#161310] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_0_#161310] disabled:shadow-[4px_4px_0_0_#161310]",
-        /** Sekunder — blok tinta. */
-        ink: "bg-ink text-paper border-2 border-ink shadow-[4px_4px_0_0_rgba(22,19,16,0.25)] hover:bg-ink-soft active:bg-ink",
+          "bg-signal text-ink-fixed border-2 border-ink-fixed shadow-[4px_4px_0_0_var(--hard-strong)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--hard-strong)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_0_var(--hard-strong)] disabled:shadow-[4px_4px_0_0_var(--hard-strong)]",
+        /** Sekunder — blok tinta (jadi blok krem di mode gelap). */
+        ink: "bg-ink text-paper border-2 border-ink shadow-[4px_4px_0_0_var(--hard-soft)] hover:bg-ink-soft active:bg-ink",
         /** Garis tinta saja. */
         outline:
           "bg-paper-raised text-ink border-2 border-ink hover:bg-signal-soft active:bg-signal-soft/60",
