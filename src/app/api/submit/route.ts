@@ -14,6 +14,8 @@ import {
   IG_QUOTA_BUFFER,
   IG_CAPTION_TAGS,
   SITE_URL,
+  MENFESS_CATEGORY_IDS,
+  DEFAULT_CATEGORY,
 } from "@/constants";
 import { isDryRun } from "@/lib/config";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -85,6 +87,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // Kategori opsional — tidak dikenal / kosong → diam-diam pakai default
+  // (lebih ramah daripada menolak kiriman cuma karena labelnya aneh).
+  const category = MENFESS_CATEGORY_IDS.includes(body.category ?? "")
+    ? (body.category as string)
+    : DEFAULT_CATEGORY;
+
   // ---- 3. Rate limit per IP ----
   const ip = getClientIp(request.headers);
   const rl = checkRateLimit(ip);
@@ -138,7 +146,7 @@ export async function POST(request: Request) {
   // ---- 6. Generate gambar 1080x1080 ----
   let png: Buffer;
   try {
-    png = await renderMenfessCard(content);
+    png = await renderMenfessCard(content, category);
   } catch (err) {
     console.error("[submit] gagal generate gambar:", err);
     return fail(
@@ -170,7 +178,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const caption = `${content}\n\nKirim menfess kamu juga lewat ${SITE_URL}\n\n${IG_CAPTION_TAGS}`;
+  // Caption: teks + baris kategori (HANYA jika bukan "bebas" — post lama
+  // & bebas tidak punya baris ini, jadi tidak perlu migrasi apa pun).
+  const categoryLine =
+    category !== DEFAULT_CATEGORY ? `kategori: ${category}\n\n` : "";
+  const caption = `${content}\n\n${categoryLine}Kirim menfess kamu juga lewat ${SITE_URL}\n\n${IG_CAPTION_TAGS}`;
 
   // ---- 9. Buat media container IG ----
   let creationId: string;
@@ -210,6 +222,8 @@ export async function POST(request: Request) {
   const permalink = await getPermalink(mediaId);
   await deleteImage(publicId);
 
-  console.log(`[submit] OK ip=${ip} chars=${content.length} media=${mediaId}`);
+  console.log(
+    `[submit] OK ip=${ip} chars=${content.length} category=${category} media=${mediaId}`
+  );
   return NextResponse.json<SubmitResponse>({ ok: true, permalink });
 }

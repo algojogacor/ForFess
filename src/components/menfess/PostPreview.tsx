@@ -29,10 +29,13 @@ function renderNode(node: TemplateNode, key?: number): ReactNode {
 
 export function PostPreview({
   text,
+  category,
   className,
   ariaLabel = "Pratinjau kartu menfess",
 }: {
   text: string;
+  /** Kategori opsional — dirender sebagai stempel, identik dgn kartu IG. */
+  category?: string;
   className?: string;
   ariaLabel?: string;
 }) {
@@ -72,7 +75,7 @@ export function PostPreview({
           pointerEvents: "none",
         }}
       >
-        {renderNode(buildTemplateNode(displayText, CSS_FONTS_REF))}
+        {renderNode(buildTemplateNode(displayText, CSS_FONTS_REF, category))}
       </div>
     </div>
   );

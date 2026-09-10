@@ -20,8 +20,12 @@ import { MenfessActions } from "@/components/menfess/MenfessActions";
 import { ReactionBar } from "@/components/menfess/ReactionBar";
 import { getMediaCached } from "@/lib/media-lookup";
 import { InstagramError } from "@/lib/instagram";
-import { extractMenfessText, excerptOfText } from "@/lib/caption";
-import { IG_HANDLE } from "@/constants";
+import {
+  extractMenfessText,
+  excerptOfText,
+  extractCategoryFromCaption,
+} from "@/lib/caption";
+import { findCategory, IG_HANDLE } from "@/constants";
 import { cn } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -78,6 +82,7 @@ export default async function FessDetailPage({ params }: PageProps) {
   if (!media) notFound();
 
   const text = extractMenfessText(media.caption);
+  const category = findCategory(extractCategoryFromCaption(media.caption) ?? "");
 
   let dateLabel = "";
   let dateIso: string | undefined;
@@ -114,6 +119,7 @@ export default async function FessDetailPage({ params }: PageProps) {
             </span>
             <PostPreview
               text={text || "Kartu ini tanpa teks."}
+              category={category?.id}
               ariaLabel={text ? `Isi menfess: ${excerptOfText(text, 120)}` : "Kartu menfess tanpa teks"}
               className="rounded-2xl border-2 border-ink bg-paper shadow-[8px_8px_0_0_var(--hard-strong)]"
             />
@@ -152,6 +158,19 @@ export default async function FessDetailPage({ params }: PageProps) {
                 Anonim
               </span>
             </div>
+
+            {/* Stempel kategori — kalau kiriman memilih satu */}
+            {category ? (
+              <div className="mt-3">
+                <span
+                  className="inline-flex -rotate-2 items-center gap-1.5 rounded-md border-2 border-tomato-deep px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-tomato-deep"
+                  title={`Kategori kiriman: ${category.label}`}
+                >
+                  <span aria-hidden className="text-[13px] leading-none">{category.emoji}</span>
+                  {category.label}
+                </span>
+              </div>
+            ) : null}
 
             {/* Teks lengkap — buat screen reader & yang mau salin teksnya */}
             {text ? (

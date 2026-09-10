@@ -32,11 +32,15 @@ const SATORI_FONTS = [
 
 /**
  * Render teks menfess menjadi PNG 1080x1080.
+ * `categoryId` opsional — menambah stempel kategori di kartu.
  * Melempar Error jika Satori/sharp gagal — pemanggil (API route)
  * yang menerjemahkannya menjadi pesan yang ramah untuk user.
  */
-export async function renderMenfessCard(text: string): Promise<Buffer> {
-  const node = buildTemplateNode(text, SATORI_FONTS_REF);
+export async function renderMenfessCard(
+  text: string,
+  categoryId?: string
+): Promise<Buffer> {
+  const node = buildTemplateNode(text, SATORI_FONTS_REF, categoryId);
 
   const svg = await satori(node as never, {
     width: 1080,

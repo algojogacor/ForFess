@@ -3,9 +3,11 @@
  * menfess" dari boilerplate yang kita tambahkan sendiri saat posting.
  *
  * Dikenali dua format boilerplate:
- *  - Format sekarang (/api/submit): `${content}\n\nKirim menfess kamu juga lewat ${SITE_URL}\n\n${tags}`
+ *  - Format sekarang (/api/submit): `${content}\n\n[kategori: x]\n\nKirim menfess kamu juga lewat ${SITE_URL}\n\n${tags}`
  *  - Format lama (post lama di akun): `${content}\n\n— terkirim anonim melalui ${host}\n\n${tags}`
  */
+
+import { MENFESS_CATEGORY_IDS } from "@/constants";
 
 /** Penanda awal boilerplate — yang paling AWAL di caption yang menang. */
 const BOILERPLATE_MARKERS = [
@@ -13,13 +15,16 @@ const BOILERPLATE_MARKERS = [
   "— terkirim anonim melalui",
 ];
 
+/** Baris kategori (opsional) — ditulis /api/submit saat user memilih kategori. */
+const CATEGORY_LINE_RE = /^kategori:\s*([a-z-]+)\s*$/gm;
+
 /** Baris yang isinya cuma hashtag (dibersihkan dari ekor caption). */
 const TRAILING_TAGS_RE = /(?:\s*#[^\s#]+\s*)+$/;
 
 /**
  * Ambil bagian "isi menfess" dari caption IG — buang boilerplate
- * sumber link & hashtag. Aman untuk caption undefined/bentuk aneh:
- * selalu mengembalikan string (bisa kosong).
+ * sumber link, baris kategori, & hashtag. Aman untuk caption
+ * undefined/bentuk aneh: selalu mengembalikan string (bisa kosong).
  */
 export function extractMenfessText(caption: string | undefined | null): string {
   if (!caption) return "";
@@ -32,7 +37,27 @@ export function extractMenfessText(caption: string | undefined | null): string {
   }
   if (earliest >= 0) body = body.slice(0, earliest);
 
-  return body.replace(TRAILING_TAGS_RE, "").trim();
+  return body
+    .replace(CATEGORY_LINE_RE, "") // baris "kategori: x" bukan bagian isi
+    .replace(TRAILING_TAGS_RE, "")
+    .trim();
+}
+
+/**
+ * Ambil kategori dari caption IG (baris `kategori: <id>` di boilerplate).
+ * null kalau tidak ada / id-nya tidak dikenal — post lama & kategori
+ * "bebas" memang tidak menulis baris ini.
+ */
+export function extractCategoryFromCaption(
+  caption: string | undefined | null
+): string | null {
+  if (!caption) return null;
+  CATEGORY_LINE_RE.lastIndex = 0; // regex global & dipakai bersama — mulai dari awal
+  const match = CATEGORY_LINE_RE.exec(caption);
+  CATEGORY_LINE_RE.lastIndex = 0; // reset cursor supaya panggilan berikutnya bersih
+  if (!match) return null;
+  const id = match[1];
+  return MENFESS_CATEGORY_IDS.includes(id) ? id : null;
 }
 
 /**

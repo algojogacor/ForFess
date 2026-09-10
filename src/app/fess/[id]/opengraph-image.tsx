@@ -14,8 +14,11 @@ import {
   spaceMonoRegularBase64,
 } from "@/lib/fonts.generated";
 import { getMediaCached } from "@/lib/media-lookup";
-import { excerptFromCaption } from "@/lib/caption";
-import { IG_HANDLE } from "@/constants";
+import {
+  excerptFromCaption,
+  extractCategoryFromCaption,
+} from "@/lib/caption";
+import { findCategory, IG_HANDLE } from "@/constants";
 
 export const runtime = "nodejs";
 export const alt = "Kartu menfess anonim — Fess UNAIR";
@@ -43,9 +46,12 @@ export default async function OpengraphImage({
   const { id } = await params;
 
   let text = "";
+  let categoryLabel = "";
   try {
     const media = await getMediaCached(id);
     text = excerptFromCaption(media.caption, 400);
+    const cat = findCategory(extractCategoryFromCaption(media.caption) ?? "");
+    if (cat && cat.id !== "bebas") categoryLabel = cat.label.toUpperCase();
   } catch {
     /* fallback ke OG brand di bawah */
   }
@@ -184,12 +190,38 @@ export default async function OpengraphImage({
             <div
               style={{
                 display: "flex",
-                fontSize: 24,
-                color: "#776D5B",
-                fontFamily: "Space Mono",
+                alignItems: "center",
+                gap: 12,
               }}
             >
-              post anonim
+              {categoryLabel ? (
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color: "#E4572E",
+                    border: "3px solid #E4572E",
+                    borderRadius: 8,
+                    padding: "4px 12px",
+                    fontFamily: "Space Mono",
+                    letterSpacing: 3,
+                    transform: "rotate(-2deg)",
+                  }}
+                >
+                  {categoryLabel}
+                </div>
+              ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 24,
+                  color: "#776D5B",
+                  fontFamily: "Space Mono",
+                }}
+              >
+                post anonim
+              </div>
             </div>
           </div>
 

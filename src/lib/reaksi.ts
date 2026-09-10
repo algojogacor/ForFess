@@ -89,6 +89,23 @@ export async function getReactionCountsForOne(
 }
 
 /**
+ * Total SEMUA reaksi pembaca di situs (aggregate, tanpa detail per kartu).
+ * Dipakai strip statistik di landing. null = database gagal — pemanggil
+ * memutuskan sendiri (biasanya: sembunyikan angkanya, bukan karangan).
+ */
+export async function getTotalReactionCount(): Promise<number | null> {
+  try {
+    return await db.fessReaction.count();
+  } catch (err) {
+    console.error(
+      "[reaksi] gagal hitung total reaksi:",
+      err instanceof Error ? err.message : err
+    );
+    return null;
+  }
+}
+
+/**
  * Simpan satu reaksi baru. Kalau `replaceRowId` diberikan (user ganti
  * reaksi), baris lama miliknya dihapus dulu — dicocokkan JUGA dengan
  * mediaId supaya tidak mungkin menghapus reaksi kartu lain.

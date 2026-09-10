@@ -21,6 +21,7 @@ const TICKER_ITEMS = [
   `LANGSUNG KE ${IG_HANDLE}`,
   "CIVITAS UNAIR",
   "TANPA ANTRE MODERASI",
+  "KATEGORI OPSIONAL",
 ];
 
 const STEPS = [
@@ -63,9 +64,14 @@ const RULES = [
 /** Contoh teks untuk kartu demo — ditandai jelas sebagai contoh, bukan kiriman asli. */
 const SAMPLE_A =
   "Lolos sidang skripsi hari ini. Makasih buat semua doa dan kopi yang nemenin dari awal.";
-const SAMPLE_B = "Semangat, adik-adik yang besok UAS. Kalian bakal baik-baik aja.";
+const SAMPLE_B =
+  "Deg-degan nunggu pengumuman wisuda. Doakan aku bisa pakai toga bulan depan, ya.";
 
 const FAQS = [
+  {
+    q: "Kategori menfess itu apa? Wajib?",
+    a: "Opsional. Sebelum mengirim kamu boleh memilih nuansa cerita — Curhat, Pengakuan, Lucu, Semangat, atau Nanya — dan kartunya dapat stempel kecil, misalnya “CURHAT”. Pembaca di arsip bisa menyaring per kategori. Nggak pilih apa-apa? Tidak masalah, menfessmu tayang tanpa label.",
+  },
   {
     q: "Apakah ini beneran anonim?",
     a: `Beneran. Form kami nggak punya kolom nama, dan server nggak mencatat siapa yang mengirim — yang diteruskan ke Instagram cuma teksnya. Satu hal yang perlu kamu jaga sendiri: jangan menulis identitasmu di dalam isi menfess, karena teksnya tayang publik.`,
@@ -179,12 +185,14 @@ export default function LandingPage() {
               </span>
               <PostPreview
                 text={SAMPLE_A}
+                category="semangat"
                 ariaLabel="Contoh kartu menfess tentang kelulusan sidang skripsi"
                 className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_var(--hard-strong)] transition-all duration-300 hover:rotate-0 hover:shadow-[10px_10px_0_0_var(--hard-strong)]"
               />
               <PostPreview
                 text={SAMPLE_B}
-                ariaLabel="Contoh kartu menfess berisi pesan semangat"
+                category="curhat"
+                ariaLabel="Contoh kartu menfess berisi uneg-uneg nunggu wisuda"
                 className="absolute inset-x-0 top-10 z-[-1] mx-auto max-w-[92%] -rotate-3 rounded-2xl border-2 border-ink opacity-90"
               />
             </div>

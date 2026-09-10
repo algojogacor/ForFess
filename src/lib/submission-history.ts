@@ -13,6 +13,8 @@ export interface SubmissionRecord {
   id: string;
   /** Teks menfess yang terkirim (sudah public — bukan data rahasia). */
   text: string;
+  /** Kategori yang dipilih saat kirim ("bebas" = tanpa label). */
+  category?: string;
   /** Link post IG jika berhasil didapat. */
   permalink?: string;
   /** True jika pipeline berjalan dalam mode dry-run (belum tayang beneran). */
@@ -72,6 +74,7 @@ export function listSubmissions(): SubmissionRecord[] {
  */
 export function saveSubmission(input: {
   text: string;
+  category?: string;
   permalink?: string;
   dryRun: boolean;
 }): SubmissionRecord | null {
@@ -80,6 +83,7 @@ export function saveSubmission(input: {
     const record: SubmissionRecord = {
       id: makeId(),
       text: input.text.slice(0, MAX_CHARS),
+      ...(input.category ? { category: input.category } : {}),
       ...(input.permalink ? { permalink: input.permalink } : {}),
       dryRun: input.dryRun,
       at: Date.now(),

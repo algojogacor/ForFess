@@ -65,6 +65,35 @@ export const IMAGE_FONT_TIERS: Array<{ maxLen: number; size: number }> = [
   { maxLen: Number.MAX_SAFE_INTEGER, size: 33 },
 ];
 
+/* == Kategori menfess == */
+
+/**
+ * Kategori opsional saat mengirim menfess — satu-satunya sumber kebenaran.
+ * "bebas" adalah default & TIDAK ditulis ke caption IG (post lama otomatis
+ * dianggap bebas, jadi tidak ada migrasi data).
+ */
+export const MENFESS_CATEGORIES = [
+  { id: "bebas", label: "Bebas", emoji: "✳️", hint: "Tanpa label — langsung ke isinya" },
+  { id: "curhat", label: "Curhat", emoji: "🌧️", hint: "Uneg-uneg, lelah, butuh didengar" },
+  { id: "pengakuan", label: "Pengakuan", emoji: "🤫", hint: "Rahasia yang belum pernah diceritakan" },
+  { id: "lucu", label: "Lucu", emoji: "😂", hint: "Kejadian kocak, meme hidup" },
+  { id: "semangat", label: "Semangat", emoji: "🔥", hint: "Dukungan, apresiasi, kabar bahagia" },
+  { id: "tanya", label: "Nanya", emoji: "🤔", hint: "Pertanyaan buat warga kampus" },
+] as const;
+
+export type MenfessCategoryId = (typeof MENFESS_CATEGORIES)[number]["id"];
+
+/** Daftar id yang valid (validasi API & ekstraksi caption). */
+export const MENFESS_CATEGORY_IDS: readonly string[] = MENFESS_CATEGORIES.map((c) => c.id);
+
+/** Kategori default — dipakai kalau pengirim tidak memilih apa pun. */
+export const DEFAULT_CATEGORY: MenfessCategoryId = "bebas";
+
+/** Cari definisi kategori by id; undefined kalau id tidak dikenal. */
+export function findCategory(id: string): (typeof MENFESS_CATEGORIES)[number] | undefined {
+  return MENFESS_CATEGORIES.find((c) => c.id === id);
+}
+
 /* == Reaksi pembaca (disimpan di SQLite via Prisma) == */
 
 /** Definisi reaksi yang tersedia — satu-satunya sumber kebenaran. */

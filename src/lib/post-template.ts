@@ -8,7 +8,7 @@
  * Format object mengikuti struktur node Satori: { type, props: { style, children } }.
  * Satori hanya support subset CSS — flexbox, borderColor, transform rotate, dst.
  */
-import { IG_HANDLE, SITE_HOST } from "@/constants";
+import { findCategory, IG_HANDLE, SITE_HOST } from "@/constants";
 
 // Palet template — konsisten dengan identitas situs (globals.css).
 export const TEMPLATE_PALETTE = {
@@ -16,6 +16,7 @@ export const TEMPLATE_PALETTE = {
   ink: "#161310", // tinta
   yellow: "#FFC800", // kuning signal
   muted: "#776D5B", // abu hangat
+  tomato: "#E4572E", // merah tomat — stempel kategori
 } as const;
 
 export interface TemplateFonts {
@@ -76,11 +77,55 @@ function cornerMark(x: string, y: string): SatoriNode {
   };
 }
 
-/** Bangun struktur kartu menfess. `text` sudah melalui validasi panjang. */
-export function buildTemplateNode(text: string, fonts: TemplateFonts): SatoriNode {
+/**
+ * Stempel kategori — label mono bersudut, miring 2°, warna tomat.
+ * Satori hanya support flexbox: border dibuat via div pembungkus.
+ */
+function categoryStamp(label: string, fonts: TemplateFonts): SatoriNode {
+  return {
+    type: "div",
+    props: {
+      style: {
+        display: "flex",
+        border: `3px solid ${TEMPLATE_PALETTE.tomato}`,
+        borderRadius: "10px",
+        padding: "8px 20px",
+        transform: "rotate(-2deg)",
+      },
+      children: [
+        {
+          type: "span",
+          props: {
+            style: {
+              fontFamily: fonts.mono,
+              fontSize: "24px",
+              fontWeight: 700,
+              color: TEMPLATE_PALETTE.tomato,
+              letterSpacing: "4px",
+            },
+            children: label.toUpperCase(),
+          },
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * Bangun struktur kartu menfess. `text` sudah melalui validasi panjang.
+ * `categoryId` opsional — kalau bukan "bebas", kartu dapat stempel kategori
+ * di samping aksen kuning (identik antara preview client & render server).
+ */
+export function buildTemplateNode(
+  text: string,
+  fonts: TemplateFonts,
+  categoryId?: string
+): SatoriNode {
   // Teks pendek tampil tebal (headline), teks panjang medium agar nyaman dibaca.
   const fontWeight = text.length <= 90 ? 700 : 500;
   const fontSize = getTemplateFontSize(text.length);
+  const category = categoryId ? findCategory(categoryId) : undefined;
+  const showStamp = Boolean(category && category.id !== "bebas");
 
   return {
     type: "div",
@@ -162,17 +207,33 @@ export function buildTemplateNode(text: string, fonts: TemplateFonts): SatoriNod
               marginBottom: "24px",
             },
             children: [
-              // aksen kuning di atas teks
+              // aksen kuning + stempel kategori (kalau ada) — satu baris
               {
                 type: "div",
                 props: {
                   style: {
                     display: "flex",
-                    width: "72px",
-                    height: "14px",
-                    backgroundColor: TEMPLATE_PALETTE.yellow,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: "28px",
                     marginBottom: "40px",
                   },
+                  children: [
+                    {
+                      type: "div",
+                      props: {
+                        style: {
+                          display: "flex",
+                          width: "72px",
+                          height: "14px",
+                          backgroundColor: TEMPLATE_PALETTE.yellow,
+                        },
+                      },
+                    },
+                    ...(showStamp && category
+                      ? [categoryStamp(category.label, fonts)]
+                      : []),
+                  ],
                 },
               },
               {

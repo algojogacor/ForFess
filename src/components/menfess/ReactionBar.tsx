@@ -6,7 +6,8 @@ import { REACTIONS, type ReactionKind } from "@/constants";
 import { cn } from "@/lib/utils";
 
 /**
- * Reaksi pembaca — baris tombol emoji di halaman kartu /fess/[id].
+ * Reaksi pembaca — baris tombol emoji (halaman kartu /fess/[id],
+ * versi compact di kartu acak /acak).
  *
  * Prinsip:
  * - Hitungan datang dari database (nyata), bukan angka karangan.
@@ -52,7 +53,15 @@ function writeMyReaction(fessId: string, value: MyReaction | null): void {
   }
 }
 
-export function ReactionBar({ fessId }: { fessId: string }) {
+export function ReactionBar({
+  fessId,
+  variant = "full",
+}: {
+  fessId: string;
+  /** "full" = panel lengkap di /fess/[id]; "compact" = baris pill emoji di /acak. */
+  variant?: "full" | "compact";
+}) {
+  const compact = variant === "compact";
   /** null = masih memuat; angka = hitungan dari server. */
   const [counts, setCounts] = useState<ReactionCountsShape | null>(null);
   const [countsFailed, setCountsFailed] = useState(false);
@@ -180,26 +189,28 @@ export function ReactionBar({ fessId }: { fessId: string }) {
     <div
       role="group"
       aria-label="Reaksi pembaca untuk kartu ini"
-      className="mt-5 border-t-2 border-dashed border-ink/15 pt-5"
+      className={compact ? "" : "mt-5 border-t-2 border-dashed border-ink/15 pt-5"}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 font-mono text-[12px] font-bold uppercase tracking-[0.2em] text-ink-soft">
-          <span aria-hidden className="text-signal-deep">*</span>
-          Reaksi pembaca
-        </p>
-        {counts && counts.total > 0 ? (
-          <p className="font-mono text-[12px] tabular-nums text-ink-faint">
-            <span key={counts.total} className="animate-pop inline-block font-bold text-ink">
-              {counts.total}
-            </span>{" "}
-            reaksi
+      {compact ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-2 font-mono text-[12px] font-bold uppercase tracking-[0.2em] text-ink-soft">
+            <span aria-hidden className="text-signal-deep">*</span>
+            Reaksi pembaca
           </p>
-        ) : counts && counts.total === 0 && !countsFailed ? (
-          <p className="font-mono text-[12px] text-ink-faint">jadi yang pertama</p>
-        ) : null}
-      </div>
+          {counts && counts.total > 0 ? (
+            <p className="font-mono text-[12px] tabular-nums text-ink-faint">
+              <span key={counts.total} className="animate-pop inline-block font-bold text-ink">
+                {counts.total}
+              </span>{" "}
+              reaksi
+            </p>
+          ) : counts && counts.total === 0 && !countsFailed ? (
+            <p className="font-mono text-[12px] text-ink-faint">jadi yang pertama</p>
+          ) : null}
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className={cn("flex flex-wrap gap-2", compact && "flex-nowrap")}>
         {REACTIONS.map((r) => {
           const selected = my?.kind === r.kind;
           const n = counts?.[r.kind];
@@ -211,8 +222,10 @@ export function ReactionBar({ fessId }: { fessId: string }) {
               onClick={() => handleClick(r.kind)}
               aria-pressed={selected}
               aria-label={`${r.label}${typeof n === "number" ? ` — ${n} reaksi` : ""}`}
+              title={compact ? r.label : undefined}
               className={cn(
-                "group inline-flex items-center gap-1.5 rounded-full border-2 border-ink px-3 py-1.5 text-[13px] font-semibold transition-all duration-150",
+                "group inline-flex items-center gap-1.5 rounded-full border-2 border-ink font-semibold transition-all duration-150",
+                compact ? "px-2.5 py-1 text-[12px]" : "px-3 py-1.5 text-[13px]",
                 "hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--hard-soft)] active:translate-y-0 active:shadow-none",
                 selected
                   ? "bg-signal text-ink-fixed shadow-[3px_3px_0_0_var(--hard-soft)]"
@@ -229,7 +242,7 @@ export function ReactionBar({ fessId }: { fessId: string }) {
               >
                 {r.emoji}
               </span>
-              {r.label}
+              {compact ? null : r.label}
               {typeof n === "number" && n > 0 ? (
                 <span
                   key={n}
@@ -243,12 +256,25 @@ export function ReactionBar({ fessId }: { fessId: string }) {
         })}
       </div>
 
-      <p className="mt-2.5 text-[12px] leading-relaxed text-ink-faint">
-        {countsFailed
-          ? "Hitungan reaksi nggak bisa dimuat sekarang — kamu tetap bisa bereaksi, angkanya menyusul."
-          : my
-            ? "Reaksi kamu tercatat. Salah tekan? Tinggal pilih yang lain — bisa diganti, nggak bisa dicabut."
-            : "Satu reaksi per pembaca untuk tiap kartu — tanpa nama, tanpa akun."}
+      <p
+        className={cn(
+          "text-[12px] leading-relaxed text-ink-faint",
+          compact ? "mt-1.5" : "mt-2.5"
+        )}
+      >
+        {compact ? (
+          countsFailed
+            ? "Hitungan menyusul — reaksimu tetap tercatat."
+            : my
+              ? "Reaksi kamu tercatat — bisa diganti, nggak bisa dicabut."
+              : "Satu reaksi per pembaca — tanpa nama."
+        ) : countsFailed ? (
+          "Hitungan reaksi nggak bisa dimuat sekarang — kamu tetap bisa bereaksi, angkanya menyusul."
+        ) : my ? (
+          "Reaksi kamu tercatat. Salah tekan? Tinggal pilih yang lain — bisa diganti, nggak bisa dicabut."
+        ) : (
+          "Satu reaksi per pembaca untuk tiap kartu — tanpa nama, tanpa akun."
+        )}
       </p>
     </div>
   );

@@ -14,13 +14,14 @@ import {
   Link2,
   Check,
 } from "lucide-react";
-import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL } from "@/constants";
+import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL, DEFAULT_CATEGORY } from "@/constants";
 import { Button } from "@/components/ui/Button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Alert } from "@/components/ui/Alert";
 import { CharCounter } from "@/components/menfess/CharCounter";
 import { TurnstileWidget } from "@/components/menfess/TurnstileWidget";
 import { PostPreview } from "@/components/menfess/PostPreview";
+import { CategoryPicker } from "@/components/menfess/CategoryPicker";
 import { saveSubmission } from "@/lib/submission-history";
 import type { SubmitResponse } from "@/types/menfess";
 import { toast } from "sonner";
@@ -33,8 +34,16 @@ interface SuccessInfo {
   dryRun?: boolean;
 }
 
+/** Bentuk draf yang disimpan di localStorage (v2 — dengan kategori). */
+interface DraftPayload {
+  content: string;
+  category: string;
+}
+
 /** Key localStorage untuk draf menfess — tersimpan di perangkat, bukan server. */
-const DRAFT_KEY = "fess-unair:menfess-draft:v1";
+const DRAFT_KEY = "fess-unair:menfess-draft:v2";
+/** Draf versi lama (teks polos) — dibaca sekali untuk migrasi, lalu ditinggal. */
+const DRAFT_KEY_V1 = "fess-unair:menfess-draft:v1";
 
 /**
  * Form kirim menfess: textarea + captcha Turnstile + pratinjau kartu live.
@@ -46,12 +55,13 @@ const DRAFT_KEY = "fess-unair:menfess-draft:v1";
  */
 export function MenfessForm() {
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
-  const [restorableDraft, setRestorableDraft] = useState<string | null>(null);
+  const [restorableDraft, setRestorableDraft] = useState<DraftPayload | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "shared">("idle");
   const honeypotRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -78,9 +88,22 @@ export function MenfessForm() {
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        const saved = window.localStorage.getItem(DRAFT_KEY);
-        if (saved && saved.trim().length >= MIN_CHARS) {
-          setRestorableDraft(saved);
+        // v2: JSON { content, category }.
+        const savedV2 = window.localStorage.getItem(DRAFT_KEY);
+        if (savedV2) {
+          const parsed = JSON.parse(savedV2) as Partial<DraftPayload>;
+          if (parsed.content && parsed.content.trim().length >= MIN_CHARS) {
+            setRestorableDraft({
+              content: parsed.content,
+              category: typeof parsed.category === "string" ? parsed.category : DEFAULT_CATEGORY,
+            });
+          }
+        } else {
+          // v1: teks polos — draf lama sebelum ada kategori.
+          const savedV1 = window.localStorage.getItem(DRAFT_KEY_V1);
+          if (savedV1 && savedV1.trim().length >= MIN_CHARS) {
+            setRestorableDraft({ content: savedV1, category: DEFAULT_CATEGORY });
+          }
         }
       } catch {
         /* localStorage bisa saja diblokir — draf adalah bonus, bukan syarat */
@@ -90,13 +113,14 @@ export function MenfessForm() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Simpan draf otomatis (debounce 400ms) saat user mengetik.
+  // Simpan draf otomatis (debounce 400ms) saat user mengetik / ganti kategori.
   useEffect(() => {
     if (!draftLoadedRef.current) return;
     const timer = setTimeout(() => {
       try {
         if (content.trim().length > 0) {
-          window.localStorage.setItem(DRAFT_KEY, content);
+          const payload: DraftPayload = { content, category };
+          window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
         } else {
           window.localStorage.removeItem(DRAFT_KEY);
         }
@@ -105,16 +129,20 @@ export function MenfessForm() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [content]);
+  }, [content, category]);
 
   const restoreDraft = () => {
-    if (restorableDraft) setContent(restorableDraft.slice(0, MAX_CHARS));
+    if (restorableDraft) {
+      setContent(restorableDraft.content.slice(0, MAX_CHARS));
+      setCategory(restorableDraft.category);
+    }
     setRestorableDraft(null);
   };
 
   const discardDraft = () => {
     try {
       window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(DRAFT_KEY_V1);
     } catch {
       /* abaikan */
     }
@@ -135,6 +163,7 @@ export function MenfessForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content,
+            category,
             turnstileToken: captchaToken,
             website: honeypotRef.current?.value ?? "",
           }),
@@ -156,12 +185,14 @@ export function MenfessForm() {
           // Sukses → draf tidak diperlukan lagi.
           try {
             window.localStorage.removeItem(DRAFT_KEY);
+            window.localStorage.removeItem(DRAFT_KEY_V1);
           } catch {
             /* abaikan */
           }
           // Catat ke riwayat lokal "Kiriman kamu" (hanya di perangkat ini).
           saveSubmission({
             text: content,
+            category,
             permalink: data.permalink,
             dryRun: Boolean(data.dryRun),
           });
@@ -182,7 +213,7 @@ export function MenfessForm() {
         setStatus("error");
       }
     },
-    [canSubmit, content, captchaToken]
+    [canSubmit, content, category, captchaToken]
   );
 
   // Shortcut Ctrl/⌘ + Enter untuk kirim dari textarea.
@@ -197,6 +228,7 @@ export function MenfessForm() {
 
   const resetForm = () => {
     setContent("");
+    setCategory(DEFAULT_CATEGORY);
     setStatus("idle");
     setErrorMessage(null);
     setSuccess(null);
@@ -421,6 +453,12 @@ export function MenfessForm() {
           </div>
         </div>
 
+        <CategoryPicker
+          value={category}
+          onChange={setCategory}
+          disabled={submitting}
+        />
+
         <TurnstileWidget onToken={setCaptchaToken} disabled={submitting} />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -464,6 +502,7 @@ export function MenfessForm() {
         {trimmedLength > 0 ? (
           <PostPreview
             text={content}
+            category={category}
             className="animate-pop rounded-2xl border-2 border-ink shadow-[6px_6px_0_0_var(--hard-soft)]"
           />
         ) : (

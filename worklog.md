@@ -285,3 +285,34 @@ Stage Summary:
 - Keputusan penting: reaksi = satu per perangkat per kartu, bisa diganti via tiket rowId (cuid, disimpan localStorage), nggak bisa dicabut — demi hitungan yang jujur; DB gagal tidak pernah merusak halaman (fail-soft semua jalur).
 - Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA). Prisma log:['query'] masih aktif di dev — wajar, tapi di produksi sebaiknya dilepas.
 - Ide ronde berikutnya: tampilkan reaksi di /acak (mini bar atau chip), statistik total reaksi di LiveStats landing, admin/maintenance endpoint pembersihan reaksi post tua, pagination server-side arsip (after-cursor) bila post >24, regenerasi token IG + DRY_RUN=false saat produksi.
+
+---
+
+Task ID: 14
+Agent: main (Z.ai Code)
+Task: QA round + fitur baru — kategori menfess end-to-end, reaksi di /acak, statistik reaksi pembaca di landing
+
+Work Log:
+- ASSESSMENT: proyek stabil saat mulai (lint 0/0, semua route 200, dev.log hanya known issue content_publishing_limit yang fail-open). QA agent-browser awal: landing/arsip/acak/detail aman light+dark → lanjut fitur baru, bukan bugfix.
+- KATEGORI MENFESS (fitur utama ronde ini — label opsional yang menyeberangi seluruh pipeline):
+  - constants: MENFESS_CATEGORIES (bebas✳/curhat🌧/pengakuan🤫/lucu😂/semangat🔥/tanya🤔) + DEFAULT_CATEGORY="bebas" + findCategory(). "bebas" TIDAK menulis apa pun ke caption → post lama otomatis dianggap bebas, nol migrasi.
+  - caption.ts: baris marker `kategori: <id>` di boilerplate caption; extractCategoryFromCaption() + extractMenfessText kini menghapus baris kategori dari isi. Regex global dipakai bersama → lastIndex di-reset sebelum & sesudah exec (anti state leak antar panggilan).
+  - post-template.ts: categoryStamp() — stempel mono tomato (#E4572E baru di TEMPLATE_PALETTE), border 3px, rotate -2°, di samping aksen kuning (satu baris flex). buildTemplateNode(text, fonts, categoryId?) — preview client & render server identik.
+  - generate-image.ts: renderMenfessCard(text, category?). Diverifikasi visual via render PNG: kartu pendek "PENGAKUAN" & kartu 522 char "CURHAT" — stamp rapi, layout tak bergeser.
+  - API /api/submit: validasi category (tidak dikenal → diam-diam default, bukan menolak), diteruskan ke render + caption builder (categoryLine hanya jika bukan bebas). Log submit kini mencantumkan category.
+  - Form: komponen baru CategoryPicker (fieldset + radio asli sr-only + label chip — keyboard & SR jalan tanpa trik; chip terpilih kuning + hard shadow; hint dinamis per kategori). Draf di-upgrade ke v2 (JSON {content, category}) dengan fallback baca v1 teks polos; submit sukses menghapus kedua key.
+  - SubmissionHistory: chip kategori tomat per baris + mini preview ikut merender stamp (PostPreview category prop).
+  - Arsip: filter chip kategori (SEMUA + kategori yang BENAR-BENAR ada di post dimuat, dengan count — tidak ada chip mati), aktif = tomato; digabung dgn pencarian dalam satu useMemo; empty state kini menangani filter-tanpa-hasil + tombol "Bersihkan filter kategori"; badge kategori kecil di meta tiap kartu.
+  - /fess/[id]: stamp kategori miring di panel metadata + PostPreview pakai category (kartu di halaman = kartu di IG). opengraph-image per kartu: stamp kategori di header (fallback OG brand tetap aman).
+  - Landing: kartu contoh kini pakai stamp ("SEMANGAT" & "CURHAT" — SAMPLE_B text diperbarui biar cocok), ticker + item "KATEGORI OPSIONAL", FAQ baru "Kategori menfess itu apa? Wajib?" (JSON-LD ikut ke-pick otomatis).
+  - Privasi: section data menjelaskan kategori ikut publik di kartu & caption.
+- REAKSI DI /ACAK: ReactionBar dapat prop variant "full"|"compact" — compact = pill emoji+count saja (tanpa label), hint satu baris, dipasang di bawah baris meta kartu acak dengan key=item.id (state reset per kartu). Kunci localStorage sama dgn /fess/[id] → pilihan tersinkar antar halaman. Terverifikasi: klik relate di /acak → total nambah, aria-pressed true, tiket rowId tersimpan, /fess/[id] ikut menunjukkan terpilih.
+- STATISTIK REAKSI PEMBACA (landing): reaksi.ts getTotalReactionCount() (COUNT semua, fail-soft null); /api/stats menambah field readerReactions (dicache 5 menit sama dgn posts/likes — kegagalan DB independen dari IG); LiveStats dirender ulang: strip tampil jika minimal satu angka ada (posts ATAU reactions), segmen "☺ n reaksi pembaca" dgn title tooltip. Terverifikasi nyata: "SUDAH 1 MENFESS TAYANG | ♥0 SUKA | 3 REAKSI PEMBACA".
+- QA agent-browser menyeluruh: /kirim picker default Bebas → pilih Curhat → preview stamp CURHAT muncul live → draf v2 {content,category} tersimpan → submit dry-run sukses → panel "Kiriman kamu" menampilkan chip 🌧Curhat + mini kartu dgn stamp. /arsip: filter chip diuji dgn fetch stub (caption diberi marker kategori: lucu) → chip "😂Lucu 1" aktif tomato, kartu terfilter 1, kombinasi cari+filter → empty state + tombol bersihkan (fetch asli dipulihkan setelahnya — data asli belum punya kategori → chip disembunyikan, perilaku jujur benar). /acak light+dark desktop & 390px: 4 pill muat satu baris, reaksi tersimpan. Landing dark: strip stats & stamp terbaca. Mobile 390px /kirim: chip wrap 2 baris rapi. Console bersih, semua route 200 + OG routes 200. Invalid category "hackerman" via curl → ok (fallback default). Lint akhir 0 error 0 warning.
+- [Catatan proses] Satu eval gagal karena Identifier redeclared (variabel sebelumnya masih hidup di context eval) — bukan bug app; dibungkus IIFE. a11y-tree snapshot kadang menyatukan teks span bersebelahan (heading hero) — hexdump source membuktikan spasi benar.
+
+Stage Summary:
+- VERIFIED end-to-end: kategori menfess (form → preview → API → caption marker → kartu IG → arsip filter → halaman kartu → OG image), reaksi compact di /acak (state tersinkar dgn /fess/[id]), statistik reaksi pembaca di landing — semua lolos QA light/dark desktop & mobile.
+- Keputusan penting: "bebas" tidak menulis marker (post lama = bebas tanpa migrasi); kategori tak dikenal → default diam-diam (tidak menolak kiriman); chip filter hanya untuk kategori yang ada isinya; strip landing tampil kalau minimal satu angka tersedia.
+- Risiko/known issue (tetap): content_publishing_limit gagal code 1 (token tanpa permission publishing) — verifikasi ulang di Vercel dgn token fresh; MENFESS_DRY_RUN masih true (disengaja utk QA) — filter arsip baru akan kelihatan datanya setelah ada post asli berkategori.
+- Ide ronde berikutnya: pagination server-side arsip (after-cursor Graph) bila post >24; kategori di RSS/JSON-LD per item; share gambar kartu langsung dari arsip (canvas→PNG); admin cleanup endpoint reaksi post tua; regenerasi token IG + DRY_RUN=false saat produksi.

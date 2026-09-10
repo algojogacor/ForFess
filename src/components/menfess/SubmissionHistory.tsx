@@ -5,6 +5,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { ExternalLink, History, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
+import { findCategory } from "@/constants";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import {
   clearSubmissions,
@@ -112,6 +113,7 @@ export function SubmissionHistory() {
             <div className="hidden w-16 shrink-0 sm:block">
               <PostPreview
                 text={record.text}
+                category={record.category}
                 ariaLabel={`Pratinjau kartu kiriman: ${excerptOf(record.text).slice(0, 60)}`}
                 className="rounded-lg border-2 border-ink shadow-[2px_2px_0_0_var(--hard-soft)]"
               />
@@ -128,6 +130,19 @@ export function SubmissionHistory() {
                   <UserRound className="size-3" aria-hidden />
                   {record.dryRun ? "Uji coba (dry-run)" : "Tayang"}
                 </span>
+                {(() => {
+                  const cat = findCategory(record.category ?? "");
+                  if (!cat || cat.id === "bebas") return null;
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-tomato-deep"
+                      title={`Kategori: ${cat.label}`}
+                    >
+                      <span aria-hidden className="text-[11px] leading-none">{cat.emoji}</span>
+                      {cat.label}
+                    </span>
+                  );
+                })()}
                 <time
                   dateTime={new Date(record.at).toISOString()}
                   title={exactDate(record.at)}

@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { ReactionBar } from "@/components/menfess/ReactionBar";
 import { IG_HANDLE, SITE_URL } from "@/constants";
 import type { ArchiveItem } from "@/types/menfess";
 import { extractMenfessText } from "@/lib/caption";
@@ -236,6 +237,11 @@ export function RandomFess() {
                   </a>
                 ) : null}
               </div>
+            </div>
+
+            {/* Reaksi pembaca — versi compact, key=item.id biar state ikut reset per kartu */}
+            <div className="border-t-2 border-dashed border-ink/15 bg-paper-raised px-4 pb-3 pt-3">
+              <ReactionBar key={item.id} fessId={item.id} variant="compact" />
             </div>
           </article>
         ) : null}

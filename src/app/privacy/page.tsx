@@ -67,12 +67,20 @@ export default function PrivacyPage() {
               memori server, dan tidak ditulis ke basis data.
             </li>
             <li>
+              <strong className="font-bold text-ink">Kategori menfess</strong> —
+              kalau kamu memilih kategori (Curhat, Lucu, dst.), label itu
+              ditulis di kartu dan caption postingan — artinya ikut publik.
+              Nggak memilih? Nggak ada label yang dicatat.
+            </li>
+            <li>
               <strong className="font-bold text-ink">Reaksi pembaca</strong> —
               kalau kamu menekan tombol reaksi di halaman kartu, yang
               disimpan cuma ID kartunya, jenis reaksinya, dan waktunya.
               Tidak ada nama, akun, atau penanda siapa pun yang ikut
               tersimpan. Pilihan reaksi kamu sendiri diingat di perangkat
-              kamu (localStorage), bukan di server.
+              kamu (localStorage), bukan di server. Landing page menampilkan
+              jumlah total reaksi dalam bentuk agregat — tanpa rincian
+              perangkat mana pun.
             </li>
             <li>
               <strong className="font-bold text-ink">Gambar menfess</strong> —

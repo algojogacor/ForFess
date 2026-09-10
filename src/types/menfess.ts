@@ -42,6 +42,8 @@ export interface SubmitRequestBody {
   turnstileToken: string;
   /** Honeypot anti-bot — harus kosong; kalau terisi, request dibuang diam-diam. */
   website?: string;
+  /** Kategori opsional ("curhat", "lucu", …). Tidak valid / kosong → default. */
+  category?: string;
 }
 
 /** Hasil cek kuota content_publishing_limit Instagram. */

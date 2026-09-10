@@ -20,9 +20,9 @@ import {
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/Alert";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { IG_HANDLE, IG_PROFILE_URL, REACTIONS, SITE_URL } from "@/constants";
+import { IG_HANDLE, IG_PROFILE_URL, MENFESS_CATEGORIES, REACTIONS, SITE_URL, findCategory } from "@/constants";
 import type { ArchiveItem, ArchiveResponse, ArchiveSource } from "@/types/menfess";
-import { excerptFromCaption } from "@/lib/caption";
+import { excerptFromCaption, extractCategoryFromCaption } from "@/lib/caption";
 import { cn } from "@/lib/utils";
 
 /** Jumlah kartu per "halaman" tombol Muat lebih banyak. */
@@ -94,6 +94,7 @@ async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared"
 
 function ItemCard({ item, reaction }: { item: ArchiveItem; reaction?: ReactionChip }) {
   const excerpt = excerptFromCaption(item.caption, 160);
+  const category = findCategory(extractCategoryFromCaption(item.caption) ?? "");
   const date = formatDate(item.timestamp);
   const relative = relativeTime(item.timestamp);
   const [copied, setCopied] = useState(false);
@@ -162,6 +163,15 @@ function ItemCard({ item, reaction }: { item: ArchiveItem; reaction?: ReactionCh
             >
               <span aria-hidden className="text-[11px] leading-none">{reaction.emoji}</span>
               {reaction.total}
+            </span>
+          ) : null}
+          {category ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-tomato-deep/40 px-1.5 py-px font-mono text-[10px] font-bold uppercase tracking-wider text-tomato-deep"
+              title={`Kategori: ${category.label}`}
+            >
+              <span aria-hidden className="text-[10px] leading-none">{category.emoji}</span>
+              {category.label}
             </span>
           ) : null}
           {relative ? <span title={date}>{relative}</span> : date ? <span>{date}</span> : "Tanpa tanggal"}
@@ -250,6 +260,8 @@ export function ArchiveGrid() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   /** Urutan tampil: "recent" | "likes" (suka IG) | "reaksi" (pembaca situs). */
   const [sort, setSort] = useState<"recent" | "likes" | "reaksi">("recent");
+  /** Filter kategori: null = semua; id kategori = hanya kategori itu. */
+  const [category, setCategory] = useState<string | null>(null);
   /** Hitungan reaksi pembaca (database situs) untuk post yang dimuat. */
   const [reactionMap, setReactionMap] = useState<Record<string, { total: number } & Partial<Record<string, number>>>>({});
 
@@ -325,6 +337,21 @@ export function ArchiveGrid() {
     () => (items ?? []).some((m) => (reactionMap[m.id]?.total ?? 0) > 0),
     [items, reactionMap]
   );
+
+  // Kategori yang benar-benar ada di post yang dimuat — filter chip cuma
+  // menawarkan kategori yang punya isinya (tidak ada chip mati).
+  const availableCategories = useMemo(() => {
+    const present = new Map<string, number>();
+    for (const item of items ?? []) {
+      const cat = extractCategoryFromCaption(item.caption);
+      if (cat) present.set(cat, (present.get(cat) ?? 0) + 1);
+    }
+    // Urut sesuai urutan definisi constants, biar konsisten.
+    return MENFESS_CATEGORIES.filter((c) => present.has(c.id)).map((c) => ({
+      ...c,
+      count: present.get(c.id) ?? 0,
+    }));
+  }, [items]);
   const sortOptions = useMemo(
     () =>
       (
@@ -337,14 +364,21 @@ export function ArchiveGrid() {
     [hasLikeData, hasReactionData]
   );
 
-  // Filter klien-samping: cari di caption SEMUA post yang sudah dimuat
-  // (tidak dibatasi halaman yang terlihat) — lebih berguna buat pencarian.
+  // Filter klien-samping: kategori + pencarian, di caption SEMUA post yang
+  // sudah dimuat (tidak dibatasi halaman yang terlihat) — lebih berguna.
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
-  const filtered =
-    sortedItems && searching
-      ? sortedItems.filter((item) => (item.caption ?? "").toLowerCase().includes(q))
-      : sortedItems;
+  const filtered = useMemo(() => {
+    if (!sortedItems) return null;
+    let result = sortedItems;
+    if (category) {
+      result = result.filter((item) => extractCategoryFromCaption(item.caption) === category);
+    }
+    if (searching) {
+      result = result.filter((item) => (item.caption ?? "").toLowerCase().includes(q));
+    }
+    return result;
+  }, [sortedItems, category, searching, q]);
 
   if (loading) {
     return (
@@ -420,53 +454,113 @@ export function ArchiveGrid() {
         </div>
       </div>
 
-      {/* Pencarian klien-samping di atas post yang sudah dimuat */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full sm:max-w-md">
-          <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setVisibleCount(PAGE_SIZE);
-            }}
-            placeholder={`Cari teks di ${items.length} post ini…`}
-            aria-label="Cari menfess di arsip yang dimuat"
-            className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
-          />
+      {/* Pencarian + filter kategori + urutan */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-md">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              placeholder={`Cari teks di ${items.length} post ini…`}
+              aria-label="Cari menfess di arsip yang dimuat"
+              className="w-full rounded-xl border-2 border-ink bg-paper-raised py-2.5 pl-10 pr-4 text-[14px] outline-none transition-shadow placeholder:text-ink-faint/80 focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
+            />
+          </div>
+
+          {/* Toggle urutan: terbaru / paling disukai / paling direaksi — hanya jika datanya tersedia */}
+          {sortOptions.length > 1 ? (
+            <div
+              role="group"
+              aria-label="Urutkan arsip"
+              className="flex items-center gap-1 self-start rounded-xl border-2 border-ink bg-paper-raised p-1 sm:self-auto"
+            >
+              <ArrowDownWideNarrow className="mx-1.5 size-3.5 text-ink-faint" aria-hidden />
+              {sortOptions.map((opt) => {
+                const active = sort === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setSort(opt.value);
+                      setVisibleCount(PAGE_SIZE);
+                    }}
+                    aria-pressed={active}
+                    className={cn(
+                      "rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors",
+                      active
+                        ? "bg-signal text-ink-fixed shadow-[2px_2px_0_0_var(--hard-soft)]"
+                        : "text-ink-soft hover:bg-ink/5"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
-        {/* Toggle urutan: terbaru / paling disukai / paling direaksi — hanya jika datanya tersedia */}
-        {sortOptions.length > 1 ? (
+        {/* Filter kategori — hanya kategori yang benar-benar ada di arsip */}
+        {availableCategories.length > 0 ? (
           <div
             role="group"
-            aria-label="Urutkan arsip"
-            className="flex items-center gap-1 rounded-xl border-2 border-ink bg-paper-raised p-1"
+            aria-label="Saring per kategori"
+            className="flex flex-wrap items-center gap-2"
           >
-            <ArrowDownWideNarrow className="mx-1.5 size-3.5 text-ink-faint" aria-hidden />
-            {sortOptions.map((opt) => {
-              const active = sort === opt.value;
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-faint">
+              Kategori:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCategory(null);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              aria-pressed={category === null}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border-2 border-ink px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider transition-all duration-150",
+                "hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_var(--hard-soft)]",
+                category === null
+                  ? "bg-ink text-paper"
+                  : "bg-paper-raised text-ink-soft"
+              )}
+            >
+              Semua
+            </button>
+            {availableCategories.map((cat) => {
+              const active = category === cat.id;
               return (
                 <button
-                  key={opt.value}
+                  key={cat.id}
                   type="button"
                   onClick={() => {
-                    setSort(opt.value);
+                    setCategory(active ? null : cat.id);
                     setVisibleCount(PAGE_SIZE);
                   }}
                   aria-pressed={active}
+                  title={cat.hint}
                   className={cn(
-                    "rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors",
+                    "inline-flex items-center gap-1 rounded-full border-2 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider transition-all duration-150",
+                    "hover:-translate-y-0.5 hover:shadow-[2px_2px_0_0_var(--hard-soft)]",
                     active
-                      ? "bg-signal text-ink-fixed shadow-[2px_2px_0_0_var(--hard-soft)]"
-                      : "text-ink-soft hover:bg-ink/5"
+                      ? "border-tomato-deep bg-tomato-deep text-paper"
+                      : "border-ink bg-paper-raised text-ink-soft"
                   )}
                 >
-                  {opt.label}
+                  <span aria-hidden className="text-[12px] leading-none">{cat.emoji}</span>
+                  {cat.label}
+                  <span className={cn("tabular-nums", active ? "opacity-80" : "text-ink-faint")}>
+                    {cat.count}
+                  </span>
                 </button>
               );
             })}
@@ -474,21 +568,37 @@ export function ArchiveGrid() {
         ) : null}
       </div>
 
-      {searching && (filtered?.length ?? 0) === 0 ? (
+      {(searching || category) && (filtered?.length ?? 0) === 0 ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-dashed border-ink/25 bg-paper-raised/60 px-5 py-8">
           <SearchX className="size-6 text-ink-faint" aria-hidden />
           <p className="text-[15px] leading-relaxed text-ink-soft">
-            Nggak ada yang cocok dengan &ldquo;{query}&rdquo; di {items.length} post
-            terakhir. Coba kata kunci lain, atau cari langsung di akun{" "}
-            {IG_HANDLE}.
+            Nggak ada yang cocok{category ? " di kategori ini" : ""}
+            {searching ? ` dengan “${query}”` : ""} di {items.length} post
+            terakhir. Coba kata kunci lain, atau cari langsung di akun {IG_HANDLE}.
           </p>
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="font-mono text-[12px] font-bold uppercase tracking-wider text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
-          >
-            Bersihkan pencarian
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {category ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCategory(null);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                className="font-mono text-[12px] font-bold uppercase tracking-wider text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+              >
+                Bersihkan filter kategori
+              </button>
+            ) : null}
+            {searching ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="font-mono text-[12px] font-bold uppercase tracking-wider text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+              >
+                Bersihkan pencarian
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : (
         <>
