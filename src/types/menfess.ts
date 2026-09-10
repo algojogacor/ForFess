@@ -86,3 +86,25 @@ export interface CloudinaryUploadResult {
   /** URL publik gambar yang bisa diakses Meta. */
   url: string;
 }
+
+/** Satu post menfess di arsip (dari Instagram Graph API). */
+export interface ArchiveItem {
+  id: string;
+  /** Caption post; bagian teks menfess dipisah dari boilerplate saat render. */
+  caption?: string;
+  /** URL gambar dari CDN Instagram (bermasa berumur — selalu fetch fresh). */
+  mediaUrl?: string;
+  permalink?: string;
+  timestamp?: string;
+}
+
+/** Sumber data arsip: live = dari IG, stale = cache lama, unavailable = tidak ada. */
+export type ArchiveSource = "live" | "stale" | "unavailable";
+
+export interface ArchiveResponse {
+  ok: true;
+  items: ArchiveItem[];
+  source: ArchiveSource;
+  /** Epoch ms saat data terakhir berhasil diambil dari IG. */
+  fetchedAt?: number;
+}

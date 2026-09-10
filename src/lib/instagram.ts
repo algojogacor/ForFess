@@ -6,7 +6,7 @@
  */
 import { IG_GRAPH_URL } from "@/constants";
 import { getInstagramConfig } from "@/lib/config";
-import type { InstagramQuota } from "@/types/menfess";
+import type { ArchiveItem, InstagramQuota } from "@/types/menfess";
 
 export class InstagramError extends Error {
   /** Kode error dari Meta (jika ada), berguna untuk logging & mapping pesan. */
@@ -153,4 +153,38 @@ export async function getPermalink(mediaId: string): Promise<string | undefined>
   } catch {
     return undefined;
   }
+}
+
+/** Bentuk item dari endpoint /media Graph API. */
+interface GraphMediaItem {
+  id: string;
+  caption?: string;
+  media_url?: string;
+  permalink?: string;
+  timestamp?: string;
+}
+
+/**
+ * Ambil postingan terbaru akun IG untuk halaman arsip.
+ * Melempar InstagramError jika gagal — pemanggil (API arsip) yang
+ * memutuskan degrade ke cache atau empty state.
+ */
+export async function listRecentMedia(limit = 12): Promise<ArchiveItem[]> {
+  const data = await graphFetch<{ data?: GraphMediaItem[] }>(`${userId}/media`, {
+    query: {
+      fields: "id,caption,media_url,permalink,timestamp",
+      limit: String(limit),
+      access_token: accessToken,
+    },
+  });
+
+  return (data.data ?? [])
+    .filter((m) => Boolean(m.media_url))
+    .map((m) => ({
+      id: m.id,
+      caption: m.caption,
+      mediaUrl: m.media_url,
+      permalink: m.permalink,
+      timestamp: m.timestamp,
+    }));
 }

@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 
 const NAV_LINKS = [
   { href: "/kirim", label: "Kirim" },
+  { href: "/arsip", label: "Arsip" },
   { href: "/about", label: "Tentang" },
   { href: "/privacy", label: "Privasi" },
   { href: "/terms", label: "Ketentuan" },
@@ -101,11 +102,11 @@ export function Navbar() {
         </button>
       </nav>
 
-      {/* Panel mobile */}
+      {/* Panel mobile — slide turun dengan animasi rise */}
       {open ? (
         <div
           id="mobile-menu"
-          className="border-t-2 border-ink bg-paper md:hidden"
+          className="animate-rise border-t-2 border-ink bg-paper md:hidden"
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
             {NAV_LINKS.map((link) => {

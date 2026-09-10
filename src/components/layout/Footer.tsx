@@ -38,6 +38,7 @@ export function Footer() {
               {[
                 { href: "/", label: "Halaman utama" },
                 { href: "/kirim", label: "Kirim menfess" },
+                { href: "/arsip", label: "Arsip tayangan" },
                 { href: "/about", label: "Tentang" },
               ].map((l) => (
                 <li key={l.href}>

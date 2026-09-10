@@ -86,11 +86,17 @@ export default function LandingPage() {
       <section className="bg-dotgrid">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:pb-24 lg:pt-20">
           <div className="lg:col-span-7">
-            <p className="flex items-center gap-2.5 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-soft">
+            <p
+              className="flex animate-rise items-center gap-2.5 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-soft"
+              style={{ animationDelay: "0ms" }}
+            >
               <span className="inline-block size-2.5 bg-signal-deep" aria-hidden />
               Menfess anonim · civitas Universitas Airlangga
             </p>
-            <h1 className="mt-5 text-[44px] font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
+            <h1
+              className="mt-5 animate-rise text-[44px] font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl"
+              style={{ animationDelay: "70ms" }}
+            >
               Ngomong aja.
               <br />
               Nggak usah{" "}
@@ -98,12 +104,18 @@ export default function LandingPage() {
                 kenal-kenalan.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
+            <p
+              className="mt-6 max-w-xl animate-rise text-lg leading-relaxed text-ink-soft"
+              style={{ animationDelay: "140ms" }}
+            >
               Fess UNAIR nampung curhat, kabar, pengakuan, sampai uneg-uneg
               kamu — tanpa nama, tanpa akun, tanpa antre moderasi. Tulis,
               kirim, langsung tayang di {IG_HANDLE}.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div
+              className="mt-8 flex animate-rise flex-wrap items-center gap-4"
+              style={{ animationDelay: "210ms" }}
+            >
               <Link href="/kirim" className={cn(buttonVariants({ variant: "signal", size: "lg" }))}>
                 <SendHorizonal className="size-4" aria-hidden />
                 Tulis menfess kamu
@@ -115,13 +127,16 @@ export default function LandingPage() {
             </div>
 
             {/* Status kuota live — data nyata dari Instagram, bukan angka karangan */}
-            <div className="mt-10">
+            <div className="mt-10 animate-rise" style={{ animationDelay: "280ms" }}>
               <QuotaStatus />
             </div>
           </div>
 
           {/* Tumpukan kartu contoh */}
-          <div className="relative lg:col-span-5 lg:pt-6">
+          <div
+            className="relative animate-rise lg:col-span-5 lg:pt-6"
+            style={{ animationDelay: "220ms" }}
+          >
             <div className="relative mx-auto max-w-sm">
               <span className="absolute -top-3 left-4 z-10 rotate-[-5deg] rounded-md border-2 border-ink bg-tomato px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-paper">
                 Contoh kartu
@@ -129,7 +144,7 @@ export default function LandingPage() {
               <PostPreview
                 text={SAMPLE_A}
                 ariaLabel="Contoh kartu menfess tentang kelulusan sidang skripsi"
-                className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_rgba(22,19,16,0.9)]"
+                className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_rgba(22,19,16,0.9)] transition-all duration-300 hover:rotate-0 hover:shadow-[10px_10px_0_0_rgba(22,19,16,0.9)]"
               />
               <PostPreview
                 text={SAMPLE_B}
@@ -142,7 +157,7 @@ export default function LandingPage() {
       </section>
 
       {/* ==== Cara kerja: tiga langkah dengan ritme offset ==== */}
-      <section id="cara-kerja" className="border-t-2 border-ink bg-paper">
+      <section id="cara-kerja" className="scroll-mt-20 border-t-2 border-ink bg-paper">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -201,7 +216,10 @@ export default function LandingPage() {
             </div>
             <ul className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
               {RULES.map((rule, i) => (
-                <li key={rule.title} className="border-t border-paper/25 pt-5">
+                <li
+                  key={rule.title}
+                  className="border-t border-paper/25 pt-5 transition-colors duration-200 hover:border-signal"
+                >
                   <span className="font-mono text-[13px] font-bold text-signal">
                     {String(i + 1).padStart(2, "0")}
                   </span>
@@ -216,7 +234,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ==== CTA band ==== */}
+      {/* ==== CTA band, dibingkai tape zine ==== */}
+      <div aria-hidden className="h-2.5 border-y-2 border-ink bg-tape" />
       <section className="bg-signal">
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:py-20">
           <div>
@@ -242,6 +261,7 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+      <div aria-hidden className="h-2.5 border-y-2 border-ink bg-tape" />
     </div>
   );
 }
