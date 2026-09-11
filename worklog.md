@@ -439,4 +439,31 @@ Stage Summary:
 - VERIFIED: Vercel Analytics terkonfigurasi dengan `@vercel/analytics/next`.
 - Deploy produksi otomatis aktif dan siap digunakan.
 
+---
+
+Task ID: 19
+Agent: main (Antigravity)
+Task: Implementasi fitur realtime presence "xx mahasiswa sedang online" berbasis heartbeat database Neon PostgreSQL
+
+Work Log:
+- DATABASE SCHEMA & MIGRATION:
+  - Menambahkan model `ActiveSession` pada `prisma/schema.prisma` (id string anonim per sesi + lastSeen DateTime berindeks).
+  - Menjalankan `npx prisma db push` ke Neon: tabel baru berhasil dibuat tanpa menyentuh tabel `FessReaction` yang sudah ada.
+- BACKEND PRESENCE ENGINE:
+  - Membuat `src/lib/presence.ts`:
+    - `pingPresence(sessionId)`: upsert waktu heartbeat + passive cleanup (menghapus sesi usang > 5 menit dengan sampling probabilistik 20% agar hemat query).
+    - `getOnlineCount()`: menghitung sesi aktif dalam 2 menit terakhir, dilengkapi in-memory cache 15 detik untuk melindungi database dari lonjakan traffic, serta fail-open (fallback aman).
+  - Membuat API route `src/app/api/presence/route.ts` (GET & POST).
+- FRONTEND PRESENCE COMPONENT:
+  - Membuat `src/components/common/OnlinePresence.tsx`:
+    - Menggunakan random UUID sementara di `sessionStorage`.
+    - Mengirim heartbeat berkala 45 detik saat tab aktif (`document.visibilityState === 'visible'`) dan mendengarkan event `visibilitychange`.
+    - Animasi dot hijau emerald (pulsing ping effect) dengan varian `badge`, `minimal`, dan `stat`.
+  - Mengintegrasikan ke `src/components/layout/Navbar.tsx` (desktop header di samping logo, mobile top bar, dan mobile menu drawer).
+  - Mengintegrasikan ke `src/components/menfess/LiveStats.tsx` pada landing page.
+- VERIFIKASI & BUILD:
+  - Verifikasi query Neon lokal via script tsx berhasil.
+  - `npm run build` sukses 100% untuk seluruh 21 route.
+
+
 

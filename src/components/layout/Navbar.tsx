@@ -8,6 +8,7 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { useKoleksi } from "@/lib/koleksi";
+import { OnlinePresence } from "@/components/common/OnlinePresence";
 
 /** Deteksi mount tanpa setState-in-effect (aman hydration & lint). */
 const emptySubscribe = () => () => {};
@@ -115,16 +116,19 @@ export function Navbar() {
         aria-label="Navigasi utama"
         className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
       >
-        <Link
-          href="/"
-          className="group flex items-center gap-2.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 rounded-lg"
-          aria-label="Fess UNAIR — halaman utama"
-        >
-          <LogoMark />
-          <span className="text-lg font-bold tracking-tight">
-            fess<span className="text-tomato">*</span>unair
-          </span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="group flex items-center gap-2.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 rounded-lg"
+            aria-label="Fess UNAIR — halaman utama"
+          >
+            <LogoMark />
+            <span className="text-lg font-bold tracking-tight">
+              fess<span className="text-tomato">*</span>unair
+            </span>
+          </Link>
+          <OnlinePresence className="hidden sm:inline-flex" />
+        </div>
 
         {/* Link desktop */}
         <div className="hidden items-center gap-1 md:flex">
@@ -169,6 +173,7 @@ export function Navbar() {
 
         {/* Tombol menu mobile + toggle tema */}
         <div className="flex items-center gap-2 md:hidden">
+          <OnlinePresence variant="minimal" className="mr-1" />
           <ThemeToggle />
           <button
             type="button"
@@ -223,6 +228,10 @@ export function Navbar() {
             >
               Kirim menfess
             </Link>
+            <div className="mt-3 flex items-center justify-between border-t border-ink/10 pt-3">
+              <span className="font-mono text-xs text-ink-faint">Status server</span>
+              <OnlinePresence variant="badge" />
+            </div>
           </div>
         </div>
       ) : null}

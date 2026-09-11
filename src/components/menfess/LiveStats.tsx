@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart, SmilePlus, Sparkles } from "lucide-react";
+import { OnlinePresence } from "@/components/common/OnlinePresence";
 
 interface StatsResponse {
   ok: true;
@@ -96,6 +97,8 @@ export function LiveStats() {
           </span>
         </>
       ) : null}
+      <span aria-hidden className="hidden h-4 w-0.5 bg-ink/15 sm:block" />
+      <OnlinePresence variant="stat" />
       <Link
         href="/arsip"
         className="group inline-flex items-center gap-1 font-mono text-[12px] font-bold uppercase tracking-[0.18em] text-tomato-deep underline decoration-tomato/50 decoration-2 underline-offset-4 transition-colors hover:decoration-tomato"

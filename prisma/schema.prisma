@@ -32,3 +32,13 @@ model FessReaction {
   // Pola baca sekunder: buang baris tua saat maintenance.
   @@index([createdAt])
 }
+
+/// Sesi aktif anonim untuk counter "xx mahasiswa sedang online".
+/// Sesi berupa UUID acak sementara di sessionStorage browser pengunjung,
+/// tanpa IP, tanpa cookie pelacak, dan otomatis dibersihkan jika > 5 menit.
+model ActiveSession {
+  id        String   @id
+  lastSeen  DateTime @default(now())
+
+  @@index([lastSeen])
+}
