@@ -118,15 +118,14 @@ export async function saveReaction(
   replaceRowId?: string
 ): Promise<{ counts: ReactionCounts; rowId: string } | null> {
   try {
-    const created = await db.$transaction(async (tx) => {
-      if (replaceRowId) {
-        // Hanya hapus kalau id cocok DAN barisnya memang milik kartu ini.
-        await tx.fessReaction.deleteMany({
-          where: { id: replaceRowId, mediaId },
-        });
-      }
-      return tx.fessReaction.create({ data: { mediaId, kind } });
-    });
+    if (replaceRowId) {
+      // Hanya hapus kalau id cocok DAN barisnya memang milik kartu ini.
+      // Dijalankan sekuensial (tanpa $transaction) agar kompatibel dengan Neon HTTP adapter.
+      await db.fessReaction.deleteMany({
+        where: { id: replaceRowId, mediaId },
+      });
+    }
+    const created = await db.fessReaction.create({ data: { mediaId, kind } });
 
     const counts = await getReactionCountsForOne(mediaId);
     return {
