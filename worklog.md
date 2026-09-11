@@ -429,8 +429,14 @@ Work Log:
     - `CLOUDINARY_*` & `IG_*`: Terkonfigurasi.
   - Memeriksa status deploy dengan `vercel ls`: Deployment produksi terbaru (`main 31f8e29`) telah selesai dibangun dan berstatus `Ready`.
 
+- OPTIMISASI VERCEL ANALYTICS:
+  - Mengubah import `@vercel/analytics/react` menjadi `@vercel/analytics/next` di `src/app/layout.tsx` sesuai rekomendasi Next.js App Router resmi Vercel agar pencatatan pageview otomatis menyatu dengan routing App Router.
+  - Verifikasi build lokal lolos dan deploy produksi diperbarui.
+
 Stage Summary:
 - VERIFIED: Transaksi reaksi telah kompatibel 100% dengan Neon HTTP adapter di serverless/Vercel.
 - VERIFIED: Seluruh 19 environment variables utama sudah aktif di project Vercel.
+- VERIFIED: Vercel Analytics terkonfigurasi dengan `@vercel/analytics/next`.
 - Deploy produksi otomatis aktif dan siap digunakan.
+
 
