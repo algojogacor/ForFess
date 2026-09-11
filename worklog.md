@@ -488,6 +488,28 @@ Work Log:
   - Uji alur status container via script tsx Meta Graph API: terbukti bertransisi ke `FINISHED`.
   - `npm run build` lolos 100% tanpa error.
 
+---
+
+Task ID: 21
+Agent: main (Antigravity)
+Task: Pengujian End-to-End Pengiriman Menfess pada Website Produksi (https://fess-unair.vercel.app/kirim)
+
+Work Log:
+- TESTING PADA PRODUCTION WEB:
+  - Melakukan navigasi otomatis via browser subagent ke `https://fess-unair.vercel.app/kirim`.
+  - Mengisi form menfess: *"Semangat kuliah rek! Semoga minggu ini dilancarkan urusan perkuliahannya."*
+  - Cloudflare Turnstile berhasil diverifikasi secara otomatis (Success).
+  - Mengklik tombol submit "Kirim menfess".
+  - Hasil pengujian:
+    - Status: TAYANG (200 OK)
+    - Nomor Tiket: NO. LPN8
+    - Instagram Carousel Permalink: https://www.instagram.com/p/DdJP8MOoMGl/
+    - Indikator presence di navbar terlihat aktif dan mencatat `🟢 2 online`.
+    - Riwayat kiriman tersimpan dengan rapi di sisi browser.
+- KESIMPULAN:
+  - Masalah 502 / "Media ID is not available" terbukti tuntas teratasi di live production.
+
+
 
 
 
