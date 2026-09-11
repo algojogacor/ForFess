@@ -37,7 +37,7 @@ function LogoMark({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn(
-        "grid size-9 place-items-center rounded-lg border-2 border-ink bg-ink",
+        "grid size-9 place-items-center rounded-lg border-2 border-ink-fixed bg-ink-fixed dark:border-[#70685b]",
         className
       )}
     >

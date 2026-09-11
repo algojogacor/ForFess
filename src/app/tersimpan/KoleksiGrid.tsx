@@ -221,7 +221,10 @@ export function KoleksiGrid() {
         <div className="zine-tilt grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((s) => {
             const rc = reactionMap[s.item.id];
-            const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;
+            const reaction =
+              rc && rc.total > 0
+                ? (dominantReaction(rc) ?? undefined)
+                : undefined;
             return <MenfessCard key={s.item.id} item={s.item} reaction={reaction} />;
           })}
         </div>

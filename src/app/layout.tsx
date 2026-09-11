@@ -1,11 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Fraunces } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { SITE_URL } from "@/constants";
+
+// Font editorial zine untuk menfess
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["opsz"],
+});
 
 // Font identitas: Space Grotesk (display + body) & Space Mono (label/ticker).
 // Dimuat lokal (bukan Google CDN) supaya offline-safe & deterministik.
@@ -73,7 +83,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${spaceGrotesk.variable} ${spaceMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col font-sans`}
+        className={`${spaceGrotesk.variable} ${spaceMono.variable} ${fraunces.variable} antialiased bg-background text-foreground min-h-screen flex flex-col font-sans`}
       >
         <ThemeProvider>
           <Navbar />
@@ -83,6 +93,7 @@ export default function RootLayout({
           <div aria-hidden className="grain-overlay" />
           <Toaster position="bottom-center" offset={20} />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

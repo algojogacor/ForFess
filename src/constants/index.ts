@@ -17,6 +17,7 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://fess-unair.vercel.app";
 /** Host tanpa protokol, untuk tampilan singkat (watermark dsb). */
 export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
+export const SITE_URL_SHORT = SITE_HOST;
 
 /** Versi Instagram Graph API (bisa dioverride lewat env IG_API_VERSION). */
 export const IG_API_VERSION = process.env.IG_API_VERSION ?? "v22.0";

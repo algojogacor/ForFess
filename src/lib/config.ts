@@ -17,7 +17,15 @@ class MissingEnvError extends Error {
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
-    // Throw di sini supaya stack trace menunjuk file pemanggil.
+    // Saat fase build Next.js (prerender page data), berikan placeholder aman
+    // agar kompilasi build berhasil tanpa membocorkan atau membutuhkan rahasia runtime.
+    if (
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.npm_lifecycle_event === "build"
+    ) {
+      return `placeholder_${name.toLowerCase()}`;
+    }
+    // Throw saat runtime aktif agar developer/admin tahu variabel belum diisi.
     throw new MissingEnvError([name]);
   }
   return value.trim();
@@ -51,9 +59,14 @@ export const getTurnstileConfig = () => ({
  * form mengirim token placeholder yang tetap lolos karena secret key
  * development ("always pass"). Di produksi, isi dengan site key asli (0x...).
  */
-export const getTurnstileSiteKey = (): string =>
-  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "placeholder_development";
+export const getTurnstileSiteKey = (): string => {
+  const raw = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const cleaned = raw.replace(/[^\x20-\x7E]/g, "").trim();
+  return cleaned || "placeholder_development";
+};
 
 /** true jika widget Turnstile harus dirender di client. */
-export const isTurnstileWidgetEnabled = (): boolean =>
-  /^([0-3]x|0x)/.test(getTurnstileSiteKey());
+export const isTurnstileWidgetEnabled = (): boolean => {
+  const key = getTurnstileSiteKey();
+  return /^(0x|[0-3]x)/i.test(key) && !key.includes("placeholder");
+};

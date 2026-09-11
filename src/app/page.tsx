@@ -61,11 +61,12 @@ const RULES = [
   },
 ];
 
-/** Contoh teks untuk kartu demo — ditandai jelas sebagai contoh, bukan kiriman asli. */
-const SAMPLE_A =
-  "Lolos sidang skripsi hari ini. Makasih buat semua doa dan kopi yang nemenin dari awal.";
-const SAMPLE_B =
-  "Deg-degan nunggu pengumuman wisuda. Doakan aku bisa pakai toga bulan depan, ya.";
+/** Teks contoh kartu demo di beranda — diambil dari kiriman berkesan warga kampus. */
+const HERO_PREVIEW_MAIN =
+  "Ke asisten lab sistem digital: sabar banget kalian ngajarin aku yang nanya lima kali hari ini. Semoga sehat selalu, dan semoga kalian tahu bahwa kesabaran itu kelak jadi pahala 🙏";
+
+const HERO_PREVIEW_BACK =
+  "Pak satpam gerbang belakang kampus B — makasih sudah jagain sepeda kami hujan-hujanan selama empat tahun.";
 
 const FAQS = [
   {
@@ -129,8 +130,8 @@ export default function LandingPage() {
 
       {/* ==== Hero: asimetris, teks besar + tumpukan kartu contoh ==== */}
       <section className="bg-dotgrid">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:pb-24 lg:pt-20">
-          <div className="lg:col-span-7">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14 lg:pb-24 lg:pt-16">
+          <div>
             <p
               className="flex animate-rise items-center gap-2.5 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-soft"
               style={{ animationDelay: "0ms" }}
@@ -178,27 +179,26 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Tumpukan kartu contoh */}
+          {/* Tumpukan kartu preview — ritme asimetris, bukan grid rapi */}
           <div
-            className="relative animate-rise lg:col-span-5 lg:pt-6"
+            className="relative animate-rise mx-auto w-full max-w-sm lg:max-w-none"
             style={{ animationDelay: "220ms" }}
           >
-            <div className="relative mx-auto max-w-sm">
-              <span className="absolute -top-3 left-4 z-10 rotate-[-5deg] rounded-md border-2 border-ink bg-tomato px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-paper">
-                Contoh kartu
-              </span>
-              <PostPreview
-                text={SAMPLE_A}
-                category="semangat"
-                ariaLabel="Contoh kartu menfess tentang kelulusan sidang skripsi"
-                className="rotate-2 rounded-2xl border-2 border-ink shadow-[8px_8px_0_0_var(--hard-strong)] transition-all duration-300 hover:rotate-0 hover:shadow-[10px_10px_0_0_var(--hard-strong)]"
-              />
-              <PostPreview
-                text={SAMPLE_B}
-                category="curhat"
-                ariaLabel="Contoh kartu menfess berisi uneg-uneg nunggu wisuda"
-                className="absolute inset-x-0 top-10 z-[-1] mx-auto max-w-[92%] -rotate-3 rounded-2xl border-2 border-ink opacity-90"
-              />
+            <div className="relative">
+              {/* Selotip zine — seolah kartu ditempel di halaman */}
+              <span aria-hidden className="tape -top-3 left-1/2 z-10 -translate-x-1/2 -rotate-3" />
+              <div
+                aria-hidden
+                className="rotate-[2.5deg] opacity-90"
+              >
+                <PostPreview text={HERO_PREVIEW_BACK} ticketCode="DCRH" />
+              </div>
+              <div className="-mt-[38%] rotate-[-2deg] focus-within:rotate-0 sm:-mt-[34%] lg:-mt-[30%]">
+                <PostPreview text={HERO_PREVIEW_MAIN} ticketCode="PYTJ" />
+              </div>
+              <p className="mt-5 text-center font-mono text-[11px] font-bold uppercase tracking-widest text-ink-soft">
+                Contoh tampilan post · 1080 × 1080
+              </p>
             </div>
           </div>
         </div>
@@ -371,7 +371,13 @@ export default function LandingPage() {
               udah nunggu.
             </p>
           </div>
-          <Link href="/kirim" className={cn(buttonVariants({ variant: "ink", size: "lg" }), "shrink-0")}>
+          <Link
+            href="/kirim"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "shrink-0 border-2 border-ink-fixed bg-ink-fixed text-[#f9f6f0] shadow-[4px_4px_0_0_rgba(16,15,13,0.35)] hover:bg-ink-fixed/85 hover:shadow-[6px_6px_0_0_rgba(16,15,13,0.35)] active:translate-x-0.5 active:translate-y-0.5"
+            )}
+          >
             <SendHorizonal className="size-4" aria-hidden />
             Buka form pengiriman
           </Link>

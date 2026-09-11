@@ -14,7 +14,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ReactionBar } from "@/components/menfess/ReactionBar";
 import { SaveButton } from "@/components/menfess/SaveButton";

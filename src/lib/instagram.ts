@@ -24,6 +24,18 @@ export class InstagramError extends Error {
     this.fbSubcode = opts?.fbSubcode;
     this.fbType = opts?.fbType;
   }
+
+  /**
+   * Apakah error ini disebabkan oleh Meta yang gagal mengunduh gambar dari Cloudinary
+   * (error code 9004 atau pesan terkait). Gangguan sementara di sisi Meta — layak dicoba ulang.
+   */
+  get isMediaFetchFailure(): boolean {
+    return (
+      this.fbCode === 9004 ||
+      Boolean(this.message?.includes("media could not be fetched")) ||
+      Boolean(this.message?.includes("Only photo or video"))
+    );
+  }
 }
 
 /** Bentuk error standar Graph API. */
@@ -78,40 +90,47 @@ async function graphFetch<T>(
   return body as T;
 }
 
-const { userId, accessToken } = getInstagramConfig();
+function getConfig() {
+  return getInstagramConfig();
+}
 
 /**
  * Cek kuota content_publishing_limit (24 jam terakhir).
  * Melempar InstagramError jika panggilan gagal — pemanggil yang
  * memutuskan mau fail-open atau tidak.
  */
-export async function checkLimit(): Promise<InstagramQuota> {
-  const data = await graphFetch<{
-    quota_total?: number;
-    quota_remaining?: number;
-  }>(userId, {
-    query: {
-      fields: "content_publishing_limit",
-      access_token: accessToken,
-    },
-  });
-
-  const cpl = (
-    data as unknown as {
-      content_publishing_limit?: {
-        quota_total?: number;
-        quota_remaining?: number;
-      };
-    }
-  ).content_publishing_limit;
-
-  const total = cpl?.quota_total ?? 25;
-  const remaining = cpl?.quota_remaining ?? 0;
-  return { total, remaining, used: Math.max(0, total - remaining) };
+interface ContentPublishingLimitResponse {
+  data?: Array<{
+    config?: {
+      quota_total?: number;
+      quota_duration?: number;
+    };
+    quota_usage?: number;
+  }>;
 }
 
-/** Buat media container (belum tampil di feed). Mengembalikan creation_id. */
+export async function checkLimit(): Promise<InstagramQuota> {
+  const { userId, accessToken } = getConfig();
+  const res = await graphFetch<ContentPublishingLimitResponse>(
+    `${userId}/content_publishing_limit`,
+    {
+      query: {
+        fields: "config,quota_usage",
+        access_token: accessToken,
+      },
+    }
+  );
+
+  const entry = res.data?.[0];
+  const total = entry?.config?.quota_total ?? 25;
+  const used = entry?.quota_usage ?? 0;
+  const remaining = Math.max(0, total - used);
+  return { total, remaining, used };
+}
+
+/** Buat media container tunggal (belum tampil di feed). Mengembalikan creation_id. */
 export async function createMediaContainer(imageUrl: string, caption: string): Promise<string> {
+  const { userId, accessToken } = getConfig();
   const body = new URLSearchParams({
     image_url: imageUrl,
     caption,
@@ -127,8 +146,49 @@ export async function createMediaContainer(imageUrl: string, caption: string): P
   return data.id;
 }
 
+/** Buat child item container untuk postingan Carousel Instagram. Mengembalikan creation_id item. */
+export async function createCarouselItem(imageUrl: string): Promise<string> {
+  const { userId, accessToken } = getConfig();
+  const body = new URLSearchParams({
+    image_url: imageUrl,
+    is_carousel_item: "true",
+    access_token: accessToken,
+  });
+
+  const data = await graphFetch<{ id: string }>(`${userId}/media`, {
+    method: "POST",
+    body: body.toString(),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+
+  return data.id;
+}
+
+/** Buat parent container untuk Carousel Instagram dari daftar creation_id child. */
+export async function createCarouselContainer(
+  childIds: string[],
+  caption: string
+): Promise<string> {
+  const { userId, accessToken } = getConfig();
+  const body = new URLSearchParams({
+    media_type: "CAROUSEL",
+    children: childIds.join(","),
+    caption,
+    access_token: accessToken,
+  });
+
+  const data = await graphFetch<{ id: string }>(`${userId}/media`, {
+    method: "POST",
+    body: body.toString(),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+
+  return data.id;
+}
+
 /** Publish media container yang sudah jadi. Mengembalikan media id. */
 export async function publishMedia(creationId: string): Promise<string> {
+  const { userId, accessToken } = getConfig();
   const body = new URLSearchParams({
     creation_id: creationId,
     access_token: accessToken,
@@ -146,6 +206,7 @@ export async function publishMedia(creationId: string): Promise<string> {
 /** Ambil permalink post (best effort — boleh gagal tanpa menggagalkan submission). */
 export async function getPermalink(mediaId: string): Promise<string | undefined> {
   try {
+    const { accessToken } = getConfig();
     const data = await graphFetch<{ permalink?: string }>(mediaId, {
       query: { fields: "permalink", access_token: accessToken },
     });
@@ -197,6 +258,7 @@ export async function listMediaPage(options: {
   after?: string;
 }): Promise<{ items: ArchiveItem[]; nextCursor: string | null }> {
   const { limit, after } = options;
+  const { userId, accessToken } = getConfig();
 
   const query: Record<string, string> = {
     fields: MEDIA_FIELDS,
@@ -247,6 +309,7 @@ export async function getMediaById(mediaId: string): Promise<ArchiveItem> {
     throw new InstagramError("Format ID media tidak dikenal");
   }
 
+  const { accessToken } = getConfig();
   const data = await graphFetch<GraphMediaItem>(mediaId, {
     query: {
       fields: MEDIA_FIELDS,
@@ -270,6 +333,7 @@ export async function getMediaById(mediaId: string): Promise<ArchiveItem> {
  * Melempar InstagramError jika gagal — pemanggil yang memutuskan fail-open.
  */
 export async function getTotalMediaCount(): Promise<number> {
+  const { userId, accessToken } = getConfig();
   const data = await graphFetch<{ media_count?: number }>(userId, {
     query: {
       fields: "media_count",

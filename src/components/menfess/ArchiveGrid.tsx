@@ -13,7 +13,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
   MenfessCard,
@@ -547,7 +547,10 @@ export function ArchiveGrid() {
           <div className="zine-tilt grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {visibleItems.map((item) => {
               const rc = reactionMap[item.id];
-              const reaction = rc && rc.total > 0 ? dominantReaction(rc) : undefined;
+              const reaction =
+                rc && rc.total > 0
+                  ? (dominantReaction(rc) ?? undefined)
+                  : undefined;
               return <MenfessCard key={item.id} item={item} reaction={reaction} />;
             })}
           </div>

@@ -2,17 +2,25 @@
  * Utilitas caption IG — satu sumber kebenaran cara memisahkan "isi
  * menfess" dari boilerplate yang kita tambahkan sendiri saat posting.
  *
- * Dikenali dua format boilerplate:
- *  - Format sekarang (/api/submit): `${content}\n\n[kategori: x]\n\nKirim menfess kamu juga lewat ${SITE_URL}\n\n${tags}`
- *  - Format lama (post lama di akun): `${content}\n\n— terkirim anonim melalui ${host}\n\n${tags}`
+ * Dikenali format boilerplate:
+ *  - Format v3 (dengan tiket): `${content}\n\n[kategori: x]\n\n— terkirim anonim via ${SITE_URL} · NO.${ticketCode}\n\n${tags}`
+ *  - Format v2 (/api/submit lama): `${content}\n\n[kategori: x]\n\nKirim menfess kamu juga lewat ${SITE_URL}\n\n${tags}`
+ *  - Format v1 (post lama di akun): `${content}\n\n— terkirim anonim melalui ${host}\n\n${tags}`
  */
 
-import { MENFESS_CATEGORY_IDS } from "@/constants";
+import {
+  DEFAULT_CATEGORY,
+  IG_CAPTION_TAGS,
+  MENFESS_CATEGORY_IDS,
+  SITE_URL,
+} from "@/constants";
 
 /** Penanda awal boilerplate — yang paling AWAL di caption yang menang. */
 const BOILERPLATE_MARKERS = [
-  "Kirim menfess kamu juga lewat",
+  "— terkirim anonim via",
   "— terkirim anonim melalui",
+  "Terkirim anonim via",
+  "Kirim menfess kamu juga lewat",
 ];
 
 /** Baris kategori (opsional) — ditulis /api/submit saat user memilih kategori. */
@@ -21,9 +29,54 @@ const CATEGORY_LINE_RE = /^kategori:\s*([a-z-]+)\s*$/gm;
 /** Baris yang isinya cuma hashtag (dibersihkan dari ekor caption). */
 const TRAILING_TAGS_RE = /(?:\s*#[^\s#]+\s*)+$/;
 
+/** Pola tiket di baris atribusi, mis. "· NO.R4LG" atau "· tiket NO.R4LG". */
+const TICKET_PATTERN = /(?:·|\u00b7)\s*(?:tiket\s+)?NO\.([A-Z0-9]{4})(?=\s*\n|$)/i;
+
+/**
+ * Bangun caption Instagram standar:
+ * [isi menfess]
+ *
+ * [kategori: id] (hanya jika bukan "bebas")
+ *
+ * Terkirim anonim via [URL] · NO.[KODE]
+ *
+ * #Hashtags
+ */
+export function buildMenfessCaption(
+  content: string,
+  options?: {
+    category?: string;
+    ticketCode?: string;
+    siteUrl?: string;
+  }
+): string {
+  const category = options?.category ?? DEFAULT_CATEGORY;
+  const ticketCode = options?.ticketCode;
+  const siteUrl = options?.siteUrl ?? SITE_URL;
+
+  const categoryLine =
+    category !== DEFAULT_CATEGORY ? `kategori: ${category}\n\n` : "";
+  const ticketSuffix = ticketCode ? ` · NO.${ticketCode}` : "";
+  const attribution = `Terkirim anonim via ${siteUrl}${ticketSuffix}`;
+
+  return `${content}\n\n${categoryLine}${attribution}\n\n${IG_CAPTION_TAGS}`;
+}
+
+/**
+ * Ambil nomor tiket menfess dari caption IG.
+ * Mengembalikan 4 karakter kode tiket (mis. "R4LG") atau null jika tidak ada.
+ */
+export function extractTicketFromCaption(
+  caption: string | undefined | null
+): string | null {
+  if (!caption) return null;
+  const match = caption.match(TICKET_PATTERN);
+  return match ? match[1].toUpperCase() : null;
+}
+
 /**
  * Ambil bagian "isi menfess" dari caption IG — buang boilerplate
- * sumber link, baris kategori, & hashtag. Aman untuk caption
+ * sumber link, baris kategori, nomor tiket, & hashtag. Aman untuk caption
  * undefined/bentuk aneh: selalu mengembalikan string (bisa kosong).
  */
 export function extractMenfessText(caption: string | undefined | null): string {

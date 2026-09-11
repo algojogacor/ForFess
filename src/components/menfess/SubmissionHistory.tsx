@@ -114,6 +114,8 @@ export function SubmissionHistory() {
               <PostPreview
                 text={record.text}
                 category={record.category}
+                theme={record.theme as any}
+                ticketCode={record.ticketCode}
                 ariaLabel={`Pratinjau kartu kiriman: ${excerptOf(record.text).slice(0, 60)}`}
                 className="rounded-lg border-2 border-ink shadow-[2px_2px_0_0_var(--hard-soft)]"
               />
@@ -130,6 +132,14 @@ export function SubmissionHistory() {
                   <UserRound className="size-3" aria-hidden />
                   {record.dryRun ? "Uji coba (dry-run)" : "Tayang"}
                 </span>
+                {record.ticketCode ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border border-ink/25 bg-paper px-2 py-0.5 font-mono text-[11px] font-bold tracking-wider text-ink"
+                    title={`Nomor Tiket: NO.${record.ticketCode}`}
+                  >
+                    NO.{record.ticketCode}
+                  </span>
+                ) : null}
                 {(() => {
                   const cat = findCategory(record.category ?? "");
                   if (!cat || cat.id === "bebas") return null;

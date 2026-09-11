@@ -13,16 +13,19 @@ import {
   Share2,
   Link2,
   Check,
+  Copy,
 } from "lucide-react";
 import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL, DEFAULT_CATEGORY } from "@/constants";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/alert";
 import { CharCounter } from "@/components/menfess/CharCounter";
 import { TurnstileWidget } from "@/components/menfess/TurnstileWidget";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { CategoryPicker } from "@/components/menfess/CategoryPicker";
+import { ThemePicker } from "@/components/menfess/ThemePicker";
 import { saveSubmission } from "@/lib/submission-history";
+import { isPostTheme, type PostTheme } from "@/lib/post-template";
 import type { SubmitResponse } from "@/types/menfess";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -32,30 +35,37 @@ type FormStatus = "idle" | "submitting" | "success" | "error";
 interface SuccessInfo {
   permalink?: string;
   dryRun?: boolean;
+  ticketCode?: string;
+  theme?: PostTheme;
 }
 
-/** Bentuk draf yang disimpan di localStorage (v2 — dengan kategori). */
+/** Bentuk draf yang disimpan di localStorage (v3 — dengan kategori & tema). */
 interface DraftPayload {
   content: string;
   category: string;
+  theme?: PostTheme;
 }
 
 /** Key localStorage untuk draf menfess — tersimpan di perangkat, bukan server. */
-const DRAFT_KEY = "fess-unair:menfess-draft:v2";
-/** Draf versi lama (teks polos) — dibaca sekali untuk migrasi, lalu ditinggal. */
+const DRAFT_KEY = "fess-unair:menfess-draft:v3";
+/** Draf versi v2 (dengan kategori tanpa tema). */
+const DRAFT_KEY_V2 = "fess-unair:menfess-draft:v2";
+/** Draf versi v1 (teks polos). */
 const DRAFT_KEY_V1 = "fess-unair:menfess-draft:v1";
 
 /**
- * Form kirim menfess: textarea + captcha Turnstile + pratinjau kartu live.
+ * Form kirim menfess: textarea + captcha Turnstile + picker kategori +
+ * picker tema kartu + pratinjau kartu live.
  * Semua feedback (sukses/error/rate-limit) ditampilkan spesifik dan
  * manusiawi — bukan "Something went wrong".
  *
  * Ekstra: draf tersimpan otomatis di localStorage (pulih saat kembali),
- * shortcut Ctrl/⌘+Enter, serta bagikan/salin tautan setelah terkirim.
+ * shortcut Ctrl/⌘+Enter, sistem kode tiket unik, serta bagikan/salin tautan.
  */
 export function MenfessForm() {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
+  const [theme, setTheme] = useState<PostTheme>("klasik");
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
@@ -63,6 +73,7 @@ export function MenfessForm() {
   const [countdown, setCountdown] = useState(0);
   const [restorableDraft, setRestorableDraft] = useState<DraftPayload | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "shared">("idle");
+  const [ticketCopied, setTicketCopied] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   /** Guard: jangan simpan draf sebelum draft lama selesai dibaca. */
@@ -84,26 +95,43 @@ export function MenfessForm() {
   }, [countdown]);
 
   // Baca draf lama sekali saat mount — jangan auto-isi; tawarkan lewat banner.
-  // (dibaca via timeout agar setState tidak sinkron di dalam effect)
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        // v2: JSON { content, category }.
-        const savedV2 = window.localStorage.getItem(DRAFT_KEY);
+        // Cek v3 dulu (JSON { content, category, theme })
+        const savedV3 = window.localStorage.getItem(DRAFT_KEY);
+        if (savedV3) {
+          const parsed = JSON.parse(savedV3) as Partial<DraftPayload>;
+          if (parsed.content && parsed.content.trim().length >= MIN_CHARS) {
+            setRestorableDraft({
+              content: parsed.content,
+              category: typeof parsed.category === "string" ? parsed.category : DEFAULT_CATEGORY,
+              theme: isPostTheme(parsed.theme) ? parsed.theme : "klasik",
+            });
+            draftLoadedRef.current = true;
+            return;
+          }
+        }
+
+        // Fallback v2
+        const savedV2 = window.localStorage.getItem(DRAFT_KEY_V2);
         if (savedV2) {
           const parsed = JSON.parse(savedV2) as Partial<DraftPayload>;
           if (parsed.content && parsed.content.trim().length >= MIN_CHARS) {
             setRestorableDraft({
               content: parsed.content,
               category: typeof parsed.category === "string" ? parsed.category : DEFAULT_CATEGORY,
+              theme: "klasik",
             });
+            draftLoadedRef.current = true;
+            return;
           }
-        } else {
-          // v1: teks polos — draf lama sebelum ada kategori.
-          const savedV1 = window.localStorage.getItem(DRAFT_KEY_V1);
-          if (savedV1 && savedV1.trim().length >= MIN_CHARS) {
-            setRestorableDraft({ content: savedV1, category: DEFAULT_CATEGORY });
-          }
+        }
+
+        // Fallback v1: teks polos
+        const savedV1 = window.localStorage.getItem(DRAFT_KEY_V1);
+        if (savedV1 && savedV1.trim().length >= MIN_CHARS) {
+          setRestorableDraft({ content: savedV1, category: DEFAULT_CATEGORY, theme: "klasik" });
         }
       } catch {
         /* localStorage bisa saja diblokir — draf adalah bonus, bukan syarat */
@@ -113,13 +141,13 @@ export function MenfessForm() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Simpan draf otomatis (debounce 400ms) saat user mengetik / ganti kategori.
+  // Simpan draf otomatis (debounce 400ms) saat user mengetik / ganti kategori / ganti tema.
   useEffect(() => {
     if (!draftLoadedRef.current) return;
     const timer = setTimeout(() => {
       try {
         if (content.trim().length > 0) {
-          const payload: DraftPayload = { content, category };
+          const payload: DraftPayload = { content, category, theme };
           window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
         } else {
           window.localStorage.removeItem(DRAFT_KEY);
@@ -129,12 +157,15 @@ export function MenfessForm() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [content, category]);
+  }, [content, category, theme]);
 
   const restoreDraft = () => {
     if (restorableDraft) {
       setContent(restorableDraft.content.slice(0, MAX_CHARS));
       setCategory(restorableDraft.category);
+      if (restorableDraft.theme && isPostTheme(restorableDraft.theme)) {
+        setTheme(restorableDraft.theme);
+      }
     }
     setRestorableDraft(null);
   };
@@ -142,6 +173,7 @@ export function MenfessForm() {
   const discardDraft = () => {
     try {
       window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(DRAFT_KEY_V2);
       window.localStorage.removeItem(DRAFT_KEY_V1);
     } catch {
       /* abaikan */
@@ -164,6 +196,7 @@ export function MenfessForm() {
           body: JSON.stringify({
             content,
             category,
+            theme,
             turnstileToken: captchaToken,
             website: honeypotRef.current?.value ?? "",
           }),
@@ -185,6 +218,7 @@ export function MenfessForm() {
           // Sukses → draf tidak diperlukan lagi.
           try {
             window.localStorage.removeItem(DRAFT_KEY);
+            window.localStorage.removeItem(DRAFT_KEY_V2);
             window.localStorage.removeItem(DRAFT_KEY_V1);
           } catch {
             /* abaikan */
@@ -193,10 +227,17 @@ export function MenfessForm() {
           saveSubmission({
             text: content,
             category,
+            ticketCode: data.ticketCode,
+            theme,
             permalink: data.permalink,
             dryRun: Boolean(data.dryRun),
           });
-          setSuccess({ permalink: data.permalink, dryRun: data.dryRun });
+          setSuccess({
+            permalink: data.permalink,
+            dryRun: data.dryRun,
+            ticketCode: data.ticketCode,
+            theme,
+          });
           setStatus("success");
           return;
         }
@@ -213,14 +254,14 @@ export function MenfessForm() {
         setStatus("error");
       }
     },
-    [canSubmit, content, category, captchaToken]
+    [canSubmit, content, category, theme, captchaToken]
   );
 
   // Shortcut Ctrl/⌘ + Enter untuk kirim dari textarea.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
-      if (canSubmit && countdown === 0) {
+      if (canSubmit) {
         formRef.current?.requestSubmit();
       }
     }
@@ -229,10 +270,12 @@ export function MenfessForm() {
   const resetForm = () => {
     setContent("");
     setCategory(DEFAULT_CATEGORY);
+    setTheme("klasik");
     setStatus("idle");
     setErrorMessage(null);
     setSuccess(null);
     setShareState("idle");
+    setTicketCopied(false);
   };
 
   const handleCopyLink = async () => {
@@ -240,11 +283,21 @@ export function MenfessForm() {
     try {
       await navigator.clipboard.writeText(url);
       setShareState("copied");
+      toast.success("Tautan disalin ke papan klip!");
+      setTimeout(() => setShareState("idle"), 2500);
     } catch {
-      // Clipboard API bisa diblokir browser/izin — beri tahu, jangan diam.
-      toast.error("Gagal menyalin tautan", {
-        description: "Browser memblokir akses clipboard. Salin manual alamatnya dari address bar, ya.",
-      });
+      toast.error("Gagal menyalin tautan secara otomatis.");
+    }
+  };
+
+  const handleCopyTicket = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setTicketCopied(true);
+      toast.success(`Nomor tiket ${code} berhasil disalin!`);
+      setTimeout(() => setTicketCopied(false), 2500);
+    } catch {
+      toast.error("Gagal menyalin nomor tiket.");
     }
   };
 
@@ -254,7 +307,7 @@ export function MenfessForm() {
       try {
         await navigator.share({
           title: "Fess UNAIR",
-          text: "Menfessku udah tayang di @fess_unair ✳️",
+          text: `Menfessku udah tayang di @fess_unair (Tiket: NO.${success?.ticketCode ?? ""}) ✳️`,
           url,
         });
         setShareState("shared");
@@ -262,7 +315,6 @@ export function MenfessForm() {
         /* user batal share — bukan error */
       }
     } else {
-      // Fallback: salin tautan + beri tahu user lewat toast kenapa bentuknya beda.
       await handleCopyLink();
       toast.info("Browser kamu nggak dukung dialog share", {
         description: "Tautannya udah disalin ke clipboard — tinggal tempel di chat atau story.",
@@ -274,7 +326,7 @@ export function MenfessForm() {
   if (status === "success" && success) {
     return (
       <div className="animate-pop rounded-2xl border-2 border-ink bg-paper-raised p-6 sm:p-10">
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-center gap-5 text-center">
           <span className="grid size-16 place-items-center rounded-2xl border-2 border-ink bg-signal">
             <PartyPopper className="size-8 text-ink-fixed" aria-hidden />
           </span>
@@ -285,6 +337,42 @@ export function MenfessForm() {
             Teks kamu sudah dijadikan kartu rapi dan diposting. Cek feed
             Instagram untuk melihatnya tayang.
           </p>
+
+          {/* Nomor Tiket Unik */}
+          {success.ticketCode ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-ink bg-paper px-6 py-4 shadow-[3px_3px_0_0_var(--hard-soft)]">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink-faint">
+                Nomor Tiket Menfess
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-2xl font-extrabold tracking-widest text-ink">
+                  NO. {success.ticketCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyTicket(success.ticketCode!)}
+                  title="Salin nomor tiket"
+                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-paper-raised px-2.5 py-1 font-mono text-[12px] font-bold uppercase tracking-wide transition-colors hover:bg-signal"
+                >
+                  {ticketCopied ? (
+                    <>
+                      <Check className="size-3.5 text-tomato-deep" aria-hidden />
+                      Tersalin
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3.5" aria-hidden />
+                      Salin
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-[12px] text-ink-faint">
+                Tercetak di header kartu dan caption post sebagai penanda resmi.
+              </p>
+            </div>
+          ) : null}
+
           {success.dryRun ? (
             <Alert
               variant="warning"
@@ -299,6 +387,7 @@ export function MenfessForm() {
               </p>
             </Alert>
           ) : null}
+
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             {success.permalink ? (
               <a
@@ -453,9 +542,17 @@ export function MenfessForm() {
           </div>
         </div>
 
+        {/* Pilihan Kategori */}
         <CategoryPicker
           value={category}
           onChange={setCategory}
+          disabled={submitting}
+        />
+
+        {/* Pilihan Tema Warna Kartu */}
+        <ThemePicker
+          value={theme}
+          onChange={setTheme}
           disabled={submitting}
         />
 
@@ -503,6 +600,7 @@ export function MenfessForm() {
           <PostPreview
             text={content}
             category={category}
+            theme={theme}
             className="animate-pop rounded-2xl border-2 border-ink shadow-[6px_6px_0_0_var(--hard-soft)]"
           />
         ) : (

@@ -1,81 +1,173 @@
 "use client";
 
-import { createElement, useEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
 import {
-  buildTemplateNode,
-  CSS_FONTS_REF,
-  type SatoriNode as TemplateNode,
+  POST_THEME_COLORS,
+  canvasToCqw,
+  formatPostDate,
+  getPostTextTier,
+  previewTicketCode,
+  type PostTheme,
 } from "@/lib/post-template";
+import { SITE_URL_SHORT } from "@/constants";
+import { cn } from "@/lib/utils";
 
-/**
- * Pratinjau kartu menfess di browser — dirender pada kanvas internal
- * 1080x1080 lalu di-scale ke lebar kontainer, jadi hasilnya proporsional
- * (hampir identik) dengan gambar asli yang diposting ke Instagram.
- */
-
-function renderNode(node: TemplateNode, key?: number): ReactNode {
-  const { type, props } = node;
-  const children = props.children;
-
-  return createElement(
-    type,
-    { key, style: props.style as CSSProperties },
-    typeof children === "string"
-      ? children
-      : children?.map((child, i) => renderNode(child, i))
-  );
-}
+/** Tanggal pratinjau — dihitung sekali per pemuatan modul. */
+const PREVIEW_DATE = formatPostDate();
 
 export function PostPreview({
   text,
   category,
+  theme = "klasik",
+  ticketCode: ticketOverride,
   className,
-  ariaLabel = "Pratinjau kartu menfess",
+  ariaLabel,
 }: {
   text: string;
-  /** Kategori opsional — dirender sebagai stempel, identik dgn kartu IG. */
   category?: string;
+  theme?: PostTheme;
+  ticketCode?: string;
   className?: string;
   ariaLabel?: string;
 }) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.3);
-
-  // Hitung skala saat lebar kontainer berubah (responsive + resize window).
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-
-    const update = () => setScale(el.clientWidth / 1080);
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Teks kosong: tampilkan placeholder agar layout tetap terjaga.
-  const displayText = text.trim().length > 0 ? text : " ";
+  const c = POST_THEME_COLORS[theme] ?? POST_THEME_COLORS.klasik;
+  const tier = getPostTextTier(Math.max(text.length, 1));
+  const ticketCode = ticketOverride ?? previewTicketCode(text);
+  const displayText = text.trim().length > 0 ? text.trim() : "Pratinjau postmu di sini…";
+  const date = PREVIEW_DATE;
 
   return (
     <div
-      ref={wrapperRef}
+      className={cn(
+        "relative aspect-square w-full overflow-hidden border-2 border-[#1b1710] dark:border-[#70685b] shadow-[8px_8px_0_0_#1b1710] dark:shadow-[8px_8px_0_0_rgba(255,200,0,0.35)]",
+        "[container-type:inline-size]",
+        className
+      )}
       role="img"
-      aria-label={ariaLabel}
-      className={`relative w-full overflow-hidden ${className ?? ""}`}
-      style={{ aspectRatio: "1 / 1" }}
+      aria-label={ariaLabel ?? `Pratinjau tampilan post Instagram 1080×1080, varian ${theme}`}
     >
       <div
-        style={{
-          width: 1080,
-          height: 1080,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          pointerEvents: "none",
-        }}
+        className="flex h-full w-full flex-col select-none"
+        style={{ padding: canvasToCqw(72), backgroundColor: c.paper }}
       >
-        {renderNode(buildTemplateNode(displayText, CSS_FONTS_REF, category))}
+        {/* Stempel asterisk raksasa samar — tekstur cetak */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute select-none"
+          style={{
+            top: canvasToCqw(30),
+            right: canvasToCqw(-70),
+            fontFamily: "var(--font-fraunces), Georgia, serif",
+            fontWeight: 600,
+            fontSize: canvasToCqw(520),
+            lineHeight: 1,
+            color: c.watermark,
+          }}
+        >
+          *
+        </span>
+
+        {/* Header */}
+        <div className="flex w-full items-center justify-between">
+          <div className="flex items-center" style={{ gap: canvasToCqw(18) }}>
+            <span
+              aria-hidden
+              className="flex items-center justify-center rounded-[0.93cqw]"
+              style={{ width: canvasToCqw(46), height: canvasToCqw(46), backgroundColor: c.chipBg }}
+            >
+              <span
+                className="font-mono font-bold leading-none"
+                style={{ fontSize: canvasToCqw(34), paddingBottom: canvasToCqw(6), color: c.chipText }}
+              >
+                *
+              </span>
+            </span>
+            <span
+              className="font-mono font-bold"
+              style={{
+                fontSize: canvasToCqw(30),
+                letterSpacing: canvasToCqw(7),
+                color: c.ink,
+              }}
+            >
+              FESS UNAIR
+            </span>
+          </div>
+          <span
+            className="font-mono"
+            style={{ fontSize: canvasToCqw(26), letterSpacing: canvasToCqw(2), color: c.inkSoft }}
+          >
+            {date} · NO. {ticketCode}
+          </span>
+        </div>
+
+        <div
+          className="w-full"
+          style={{ height: canvasToCqw(3), marginTop: canvasToCqw(30), backgroundColor: c.ink }}
+        />
+
+        {/* Body — teks menfess */}
+        <div className="flex w-full flex-1 flex-col justify-center overflow-hidden">
+          <p
+            className="w-full whitespace-pre-wrap"
+            style={{
+              fontFamily: "var(--font-fraunces), Georgia, serif",
+              fontWeight: tier.weight,
+              fontSize: canvasToCqw(tier.fontSize),
+              lineHeight: tier.lineHeight,
+              letterSpacing: "-0.04cqw",
+              maxWidth: "86.67%",
+              color: c.ink,
+            }}
+          >
+            {displayText}
+          </p>
+        </div>
+
+        <div
+          className="w-full"
+          style={{
+            height: canvasToCqw(2),
+            backgroundColor: c.line,
+            marginBottom: canvasToCqw(26),
+          }}
+        />
+
+        {/* Footer */}
+        <div className="flex w-full items-center justify-between">
+          <div className="flex flex-col">
+            <span
+              className="font-mono font-bold"
+              style={{ fontSize: canvasToCqw(27), letterSpacing: canvasToCqw(1), color: c.ink }}
+            >
+              @fess_unair
+            </span>
+            <span
+              className="font-mono"
+              style={{
+                fontSize: canvasToCqw(24),
+                letterSpacing: canvasToCqw(1),
+                marginTop: canvasToCqw(6),
+                color: c.inkSoft,
+              }}
+            >
+              {SITE_URL_SHORT}
+            </span>
+          </div>
+          {/* Stempel ANONIM — di web bisa miring, cermin cap karet */}
+          <span
+            className="rotate-[-7deg] rounded-[0.93cqw] border-[0.37cqw] border-dashed font-mono font-bold"
+            style={{
+              padding: `${canvasToCqw(10)} ${canvasToCqw(22)}`,
+              fontSize: canvasToCqw(27),
+              letterSpacing: canvasToCqw(6),
+              borderColor: c.accent,
+              color: c.accent,
+              backgroundColor: c.stampBg ?? "transparent",
+            }}
+          >
+            ANONIM
+          </span>
+        </div>
       </div>
     </div>
   );

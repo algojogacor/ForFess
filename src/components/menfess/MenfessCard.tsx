@@ -17,7 +17,11 @@ import { SaveButton } from "@/components/menfess/SaveButton";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { IG_HANDLE, SITE_URL, findCategory } from "@/constants";
 import type { ArchiveItem } from "@/types/menfess";
-import { excerptFromCaption, extractCategoryFromCaption } from "@/lib/caption";
+import {
+  excerptFromCaption,
+  extractCategoryFromCaption,
+  extractTicketFromCaption,
+} from "@/lib/caption";
 
 /** Chip reaksi pembaca di meta kartu — emoji terbanyak + jumlah total. */
 export interface ReactionChip {
@@ -88,6 +92,7 @@ function CardImage({ item, excerpt }: { item: ArchiveItem; excerpt: string }) {
         <PostPreview
           text={excerptFromCaption(item.caption, 500) || "Kartu ini tanpa teks."}
           category={findCategory(extractCategoryFromCaption(item.caption) ?? "")?.id}
+          ticketCode={extractTicketFromCaption(item.caption) ?? undefined}
           ariaLabel={
             excerpt ? `Isi menfess: ${excerpt.slice(0, 120)}` : "Kartu menfess tanpa teks"
           }
@@ -129,6 +134,7 @@ interface MenfessCardProps {
 export function MenfessCard({ item, reaction, saveVariant = "overlay", hideSave = false }: MenfessCardProps) {
   const excerpt = excerptFromCaption(item.caption, 160);
   const category = findCategory(extractCategoryFromCaption(item.caption) ?? "");
+  const ticket = extractTicketFromCaption(item.caption);
   const date = formatDate(item.timestamp);
   const relative = relativeTime(item.timestamp);
   const [copied, setCopied] = useState(false);
@@ -207,6 +213,14 @@ export function MenfessCard({ item, reaction, saveVariant = "overlay", hideSave 
             >
               <span aria-hidden className="text-[10px] leading-none">{category.emoji}</span>
               {category.label}
+            </span>
+          ) : null}
+          {ticket ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-ink/20 bg-paper px-1.5 py-px font-mono text-[10px] font-bold tracking-wider text-ink"
+              title={`Nomor Tiket: NO.${ticket}`}
+            >
+              NO.{ticket}
             </span>
           ) : null}
           {relative ? <span title={date}>{relative}</span> : date ? <span>{date}</span> : "Tanpa tanggal"}

@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 /**
  * Error boundary global — menampilkan pesan manusiawi + tombol coba lagi.

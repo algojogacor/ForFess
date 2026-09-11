@@ -15,6 +15,10 @@ export interface SubmissionRecord {
   text: string;
   /** Kategori yang dipilih saat kirim ("bebas" = tanpa label). */
   category?: string;
+  /** Nomor tiket unik (mis. R4LG). */
+  ticketCode?: string;
+  /** Tema kartu yang dipilih. */
+  theme?: string;
   /** Link post IG jika berhasil didapat. */
   permalink?: string;
   /** True jika pipeline berjalan dalam mode dry-run (belum tayang beneran). */
@@ -75,6 +79,8 @@ export function listSubmissions(): SubmissionRecord[] {
 export function saveSubmission(input: {
   text: string;
   category?: string;
+  ticketCode?: string;
+  theme?: string;
   permalink?: string;
   dryRun: boolean;
 }): SubmissionRecord | null {
@@ -84,6 +90,8 @@ export function saveSubmission(input: {
       id: makeId(),
       text: input.text.slice(0, MAX_CHARS),
       ...(input.category ? { category: input.category } : {}),
+      ...(input.ticketCode ? { ticketCode: input.ticketCode } : {}),
+      ...(input.theme ? { theme: input.theme } : {}),
       ...(input.permalink ? { permalink: input.permalink } : {}),
       dryRun: input.dryRun,
       at: Date.now(),

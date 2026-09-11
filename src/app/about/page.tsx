@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Instagram } from "lucide-react";
-import { Alert } from "@/components/ui/Alert";
+import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";

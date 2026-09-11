@@ -25,8 +25,8 @@ export const alt = "Kartu menfess anonim — Fess UNAIR";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-function decodeFont(base64: string): Uint8Array {
-  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+function decodeFont(base64: string): Buffer {
+  return Buffer.from(base64, "base64");
 }
 
 /** Ukuran font teks menfess di OG berdasarkan panjang — mirip tier kartu IG. */

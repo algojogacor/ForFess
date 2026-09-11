@@ -25,6 +25,7 @@ export const buttonVariants = cva(
         link: "text-ink underline decoration-signal decoration-4 underline-offset-4 hover:decoration-tomato",
       },
       size: {
+        default: "h-11 px-5 text-[15px] rounded-xl",
         sm: "h-9 px-3.5 text-sm rounded-lg",
         md: "h-11 px-5 text-[15px] rounded-xl",
         lg: "h-13 px-7 text-base rounded-xl",

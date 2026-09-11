@@ -66,7 +66,7 @@ export async function getReactionCounts(mediaIds: string[]): Promise<ReactionMap
 export async function getReactionCountsForOne(
   mediaId: string
 ): Promise<ReactionCounts | null> {
-  if (!isValidMediaId(mediaId)) return {};
+  if (!isValidMediaId(mediaId)) return { total: 0 };
   try {
     const grouped = await db.fessReaction.groupBy({
       by: ["kind"],

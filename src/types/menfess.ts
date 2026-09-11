@@ -30,6 +30,10 @@ export interface SubmitSuccess {
   permalink?: string;
   /** True jika berjalan dalam mode dry-run (tidak benar-benar posting). */
   dryRun?: boolean;
+  /** Nomor tiket unik 4-karakter (mis. R4LG). */
+  ticketCode?: string;
+  /** Tema warna kartu yang dipilih. */
+  theme?: string;
 }
 
 export type SubmitResponse = SubmitSuccess | SubmitError;
@@ -44,6 +48,8 @@ export interface SubmitRequestBody {
   website?: string;
   /** Kategori opsional ("curhat", "lucu", …). Tidak valid / kosong → default. */
   category?: string;
+  /** Pilihan tema kartu opsional ("klasik", "kuning", "gelap", "tinta"). */
+  theme?: string;
 }
 
 /** Hasil cek kuota content_publishing_limit Instagram. */
@@ -100,6 +106,8 @@ export interface ArchiveItem {
   timestamp?: string;
   /** Jumlah suka; undefined = tidak bisa diambil (jangan tampilkan, jangan karangan). */
   likeCount?: number;
+  /** Nomor tiket unik (diekstrak dari caption jika ada). */
+  ticketCode?: string | null;
 }
 
 /** Sumber data arsip: live = dari IG, stale = cache lama, unavailable = tidak ada. */
