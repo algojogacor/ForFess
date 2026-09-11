@@ -186,6 +186,62 @@ export async function createCarouselContainer(
   return data.id;
 }
 
+export interface ContainerStatusResponse {
+  id: string;
+  status_code?: "EXPIRED" | "ERROR" | "FINISHED" | "IN_PROGRESS" | "PUBLISHED";
+  status?: string;
+}
+
+/** Cek status pemrosesan container media di server Meta. */
+export async function getContainerStatus(containerId: string): Promise<ContainerStatusResponse> {
+  const { accessToken } = getConfig();
+  return graphFetch<ContainerStatusResponse>(containerId, {
+    query: {
+      fields: "status_code,status",
+      access_token: accessToken,
+    },
+  });
+}
+
+/**
+ * Menunggu media container Instagram selesai diproses (status_code: FINISHED).
+ * Meta memproses media secara asinkron; mencoba publish sebelum FINISHED
+ * akan menghasilkan error "Media ID is not available" (code 9007).
+ */
+export async function waitForContainer(
+  containerId: string,
+  maxAttempts = 15,
+  delayMs = 1200
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await getContainerStatus(containerId);
+    if (res.status_code === "FINISHED" || res.status_code === "PUBLISHED") {
+      return;
+    }
+
+    if (res.status_code === "ERROR") {
+      throw new InstagramError(
+        `Media container Instagram gagal diproses (${res.status ?? "ERROR"}).`,
+        { fbCode: 9007 }
+      );
+    }
+
+    if (res.status_code === "EXPIRED") {
+      throw new InstagramError("Media container Instagram sudah kedaluwarsa.", {
+        fbCode: 9007,
+      });
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  console.warn(
+    `[instagram] Container ${containerId} belum FINISHED setelah ${maxAttempts} polling, mencoba lanjut...`
+  );
+}
+
 /** Publish media container yang sudah jadi. Mengembalikan media id. */
 export async function publishMedia(creationId: string): Promise<string> {
   const { userId, accessToken } = getConfig();

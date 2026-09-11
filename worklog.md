@@ -465,5 +465,29 @@ Work Log:
   - Verifikasi query Neon lokal via script tsx berhasil.
   - `npm run build` sukses 100% untuk seluruh 21 route.
 
+---
+
+Task ID: 20
+Agent: main (Antigravity)
+Task: Perbaikan error posting Instagram Carousel "Media ID is not available" (502 / code 9007)
+
+Work Log:
+- ROOT CAUSE ANALYSIS:
+  - User mengalami error saat mengirim menfess: `Failed to load resource: 502 /api/submit` dengan pesan `Kartu carousel sudah jadi tapi Instagram gagal menerbitkannya: Media ID is not available.`
+  - Investigasi Meta Graph API: Saat container gambar carousel dibuat, Meta memproses gambar secara asinkron di server mereka (`status_code: IN_PROGRESS`).
+  - Sebelumnya, pipeline langsung memanggil `publishMedia(carouselCreationId)` seketika tanpa menunggu Meta selesai memproses media. Karena container belum siap, Meta menolak dengan error code 9007 subcode 2207027 (`Media ID is not available`).
+  - Bukti live test Meta API: Item container awalnya berstatus `IN_PROGRESS` dan baru berubah menjadi `FINISHED` setelah 1-2 detik.
+- FIX IMPLEMENTATION:
+  - Menambahkan fungsi `getContainerStatus` dan `waitForContainer` pada `src/lib/instagram.ts` untuk mem-polling `status_code` container sampai berstatus `FINISHED`.
+  - Memperbarui `src/app/api/submit/route.ts`:
+    1. Menunggu kedua item slide (`slide1ChildId` dan `slide2ChildId`) berstatus `FINISHED`.
+    2. Membuat parent carousel container (`carouselCreationId`).
+    3. Menunggu parent carousel container berstatus `FINISHED`.
+    4. Memanggil `publishMedia` dengan aman.
+- VERIFIKASI & BUILD:
+  - Uji alur status container via script tsx Meta Graph API: terbukti bertransisi ke `FINISHED`.
+  - `npm run build` lolos 100% tanpa error.
+
+
 
 

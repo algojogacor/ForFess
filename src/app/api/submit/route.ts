@@ -24,6 +24,7 @@ import {
   checkLimit,
   createCarouselItem,
   createCarouselContainer,
+  waitForContainer,
   publishMedia,
   getPermalink,
   InstagramError,
@@ -196,11 +197,20 @@ export async function POST(request: Request) {
       createCarouselItem(slide2Url),
     ]);
 
+    // Tunggu Meta selesai memproses kedua slide item (status_code: FINISHED)
+    await Promise.all([
+      waitForContainer(slide1ChildId),
+      waitForContainer(slide2ChildId),
+    ]);
+
     // Satukan ke parent Carousel container dengan caption
     carouselCreationId = await createCarouselContainer(
       [slide1ChildId, slide2ChildId],
       caption
     );
+
+    // Tunggu parent Carousel container berstatus FINISHED sebelum dipublish
+    await waitForContainer(carouselCreationId);
   } catch (err) {
     const ig = err instanceof InstagramError ? err : null;
 
@@ -224,10 +234,17 @@ export async function POST(request: Request) {
           createCarouselItem(slide2Url),
         ]);
 
+        await Promise.all([
+          waitForContainer(slide1ChildId),
+          waitForContainer(slide2ChildId),
+        ]);
+
         carouselCreationId = await createCarouselContainer(
           [slide1ChildId, slide2ChildId],
           caption
         );
+
+        await waitForContainer(carouselCreationId);
       } catch (retryErr) {
         await deleteImage(publicId).catch(() => {});
         const retryIg = retryErr instanceof InstagramError ? retryErr : ig;
