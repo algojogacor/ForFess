@@ -10,6 +10,7 @@
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "test:security": "node scratch/test-security.mjs",
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {

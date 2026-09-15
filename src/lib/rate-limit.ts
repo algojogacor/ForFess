@@ -76,9 +76,38 @@ export function checkReactionRateLimit(ip: string): RateLimitResult {
   return reactionLimiter(reactionHits, ip);
 }
 
-/** Ambil IP klien dari header request (Vercel memakai x-forwarded-for). */
+/**
+ * Ambil IP klien dengan mitigasi anti-IP spoofing:
+ * 1. Prioritaskan header edge Vercel yang tepercaya (`x-vercel-forwarded-for`).
+ * 2. Cek `x-real-ip` (reverse proxy tepercaya).
+ * 3. Cek `cf-connecting-ip` (Cloudflare).
+ * 4. Fallback ke `x-forwarded-for`: ambil elemen terakhir (proxy terdekat yang tepercaya),
+ *    bukan indeks pertama yang rentan dipalsukan oleh klien/penyerang.
+ * 5. Jika tidak ditemukan atau kosong, kembalikan "unknown".
+ */
 export function getClientIp(headers: Headers): string {
+  // 1. Header edge tepercaya dari Vercel (ambil elemen pertama jika multi-hop)
+  const vercelFwd = headers.get("x-vercel-forwarded-for");
+  if (vercelFwd) {
+    const ip = vercelFwd.split(",")[0]?.trim();
+    if (ip) return ip;
+  }
+
+  // 2. Cek x-real-ip dari reverse proxy
+  const realIp = headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
+  // 3. Cek cf-connecting-ip jika menggunakan Cloudflare
+  const cfIp = headers.get("cf-connecting-ip")?.trim();
+  if (cfIp) return cfIp;
+
+  // 4. Fallback ke x-forwarded-for: hindari index 0 karena bisa dipalsukan attacker via header request
   const fwd = headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return headers.get("x-real-ip") ?? "unknown";
+  if (fwd) {
+    const ips = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+    if (ips.length > 0) return ips[ips.length - 1];
+  }
+
+  return "unknown";
 }
+
