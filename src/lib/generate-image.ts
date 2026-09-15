@@ -29,6 +29,7 @@ import {
   type BuildTemplateOptions,
   type PostTheme,
 } from "@/lib/post-template";
+import { loadEmoji } from "@/lib/emoji";
 
 function decodeBase64Font(b64: string): Buffer {
   return Buffer.from(b64, "base64");
@@ -71,6 +72,12 @@ export async function renderMenfessCard(
     width: 1080,
     height: 1080,
     fonts: SATORI_FONTS as any,
+    loadAdditionalAsset: async (code: string, segment: string) => {
+      if (code === "emoji") {
+        return (await loadEmoji(segment)) ?? [];
+      }
+      return [];
+    },
   });
 
   return sharp(Buffer.from(svg))
