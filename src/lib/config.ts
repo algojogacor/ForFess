@@ -48,16 +48,18 @@ export const getCloudinaryConfig = () => ({
   apiSecret: requireEnv("CLOUDINARY_API_SECRET"),
 });
 
-/** Konfigurasi Turnstile (server side). */
+/**
+ * Konfigurasi Turnstile (server side).
+ * Kunci bersifat opsional: jika dikosongkan, verifikasi Turnstile dinonaktifkan (bypass).
+ */
 export const getTurnstileConfig = () => ({
-  secretKey: requireEnv("TURNSTILE_SECRET_KEY"),
+  secretKey: (process.env.TURNSTILE_SECRET_KEY ?? "").replace(/[^\x20-\x7E]/g, "").trim(),
 });
 
 /**
  * Site key Turnstile untuk client.
- * Nilai "placeholder_development" berarti widget TIDAK dirender di lokal —
- * form mengirim token placeholder yang tetap lolos karena secret key
- * development ("always pass"). Di produksi, isi dengan site key asli (0x...).
+ * Nilai "placeholder_development" berarti widget TIDAK dirender di client —
+ * di produksi, jika ingin mengaktifkan Turnstile, isi dengan site key asli (0x...).
  */
 export const getTurnstileSiteKey = (): string => {
   const raw = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
@@ -65,8 +67,36 @@ export const getTurnstileSiteKey = (): string => {
   return cleaned || "placeholder_development";
 };
 
-/** true jika widget Turnstile harus dirender di client. */
+/**
+ * true jika widget Turnstile harus dirender di client.
+ * Widget hanya aktif jika site key diisi dan bukan dummy/placeholder.
+ */
 export const isTurnstileWidgetEnabled = (): boolean => {
   const key = getTurnstileSiteKey();
-  return /^(0x|[0-3]x)/i.test(key) && !key.includes("placeholder");
+  return (
+    key.length >= 10 &&
+    /^(0x|[0-3]x)/i.test(key) &&
+    !key.includes("placeholder")
+  );
 };
+
+/**
+ * true jika validasi Turnstile aktif di server.
+ * Aktif HANYA jika keduanya (TURNSTILE_SECRET_KEY dan NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+ * telah diisi dengan kunci Cloudflare yang valid (bukan kosong, dummy, atau placeholder).
+ * Jika salah satu atau keduanya dikosongkan, pipeline menfess berjalan tanpa captcha (otomatis lolos).
+ */
+export const isTurnstileEnabled = (): boolean => {
+  const { secretKey } = getTurnstileConfig();
+  if (
+    !secretKey ||
+    secretKey.length < 10 ||
+    !/^(0x|[0-3]x)/i.test(secretKey) ||
+    secretKey.startsWith("placeholder")
+  ) {
+    return false;
+  }
+  return isTurnstileWidgetEnabled();
+};
+
+

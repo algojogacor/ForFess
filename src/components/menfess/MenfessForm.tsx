@@ -21,6 +21,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Alert } from "@/components/ui/alert";
 import { CharCounter } from "@/components/menfess/CharCounter";
 import { TurnstileWidget } from "@/components/menfess/TurnstileWidget";
+import { isTurnstileWidgetEnabled } from "@/lib/config";
 import { PostPreview } from "@/components/menfess/PostPreview";
 import { CategoryPicker } from "@/components/menfess/CategoryPicker";
 import { ThemePicker } from "@/components/menfess/ThemePicker";
@@ -79,11 +80,12 @@ export function MenfessForm() {
   /** Guard: jangan simpan draf sebelum draft lama selesai dibaca. */
   const draftLoadedRef = useRef(false);
 
+  const turnstileEnabled = isTurnstileWidgetEnabled();
   const submitting = status === "submitting";
   const trimmedLength = content.trim().length;
   const canSubmit =
     !submitting &&
-    captchaToken !== null &&
+    (!turnstileEnabled || captchaToken !== null) &&
     trimmedLength >= MIN_CHARS &&
     trimmedLength <= MAX_CHARS;
 
@@ -197,7 +199,7 @@ export function MenfessForm() {
             content,
             category,
             theme,
-            turnstileToken: captchaToken,
+            turnstileToken: captchaToken ?? "turnstile-disabled",
             website: honeypotRef.current?.value ?? "",
           }),
         });
@@ -274,6 +276,7 @@ export function MenfessForm() {
     setStatus("idle");
     setErrorMessage(null);
     setSuccess(null);
+    setCaptchaToken(turnstileEnabled ? null : "turnstile-disabled");
     setShareState("idle");
     setTicketCopied(false);
   };

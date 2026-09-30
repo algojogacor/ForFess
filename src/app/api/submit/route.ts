@@ -14,8 +14,7 @@ import {
   SITE_URL,
   MENFESS_CATEGORY_IDS,
   DEFAULT_CATEGORY,
-} from "@/constants";
-import { isDryRun } from "@/lib/config";
+import { isDryRun, isTurnstileEnabled } from "@/lib/config";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { renderMenfessCard } from "@/lib/generate-image";
@@ -99,22 +98,26 @@ export async function POST(request: Request) {
   }
 
   // ---- 4. Captcha Turnstile ----
-  const token = body.turnstileToken;
-  if (typeof token !== "string" || token.trim() === "") {
-    return fail(
-      "CAPTCHA_FAILED",
-      "Verifikasi keamanan belum selesai. Tunggu widget captcha, lalu kirim lagi.",
-      400
-    );
-  }
-  const captcha = await verifyTurnstileToken(token, ip);
-  if (!captcha.success) {
-    console.warn("[submit] turnstile gagal:", captcha.errorCodes);
-    return fail(
-      "CAPTCHA_FAILED",
-      "Verifikasi keamanan ditolak Cloudflare. Segarkan halaman, selesaikan captcha dari awal, lalu kirim lagi.",
-      403
-    );
+  if (isTurnstileEnabled()) {
+    const token = body.turnstileToken;
+    if (typeof token !== "string" || token.trim() === "") {
+      return fail(
+        "CAPTCHA_FAILED",
+        "Verifikasi keamanan belum selesai. Tunggu widget captcha, lalu kirim lagi.",
+        400
+      );
+    }
+    const captcha = await verifyTurnstileToken(token, ip);
+    if (!captcha.success) {
+      console.warn("[submit] turnstile gagal:", captcha.errorCodes);
+      return fail(
+        "CAPTCHA_FAILED",
+        "Verifikasi keamanan ditolak Cloudflare. Segarkan halaman, selesaikan captcha dari awal, lalu kirim lagi.",
+        403
+      );
+    }
+  } else {
+    console.log("[submit] Turnstile nonaktif (kunci kosong/placeholder) — verifikasi captcha dilewati.");
   }
 
   // ---- 5. Cek kuota Instagram (fail-open: kalau API-nya gagal, izinkan) ----

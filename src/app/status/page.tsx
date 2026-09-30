@@ -10,6 +10,7 @@ import { StatusLockBtn } from "@/components/status/StatusLockBtn";
 import { IG_HANDLE, IG_PROFILE_URL, IG_QUOTA_BUFFER } from "@/constants";
 import { checkLimit, listRecentMedia, InstagramError } from "@/lib/instagram";
 import { db } from "@/lib/db";
+import { isTurnstileEnabled } from "@/lib/config";
 import { cn } from "@/lib/utils";
 
 /**
@@ -65,9 +66,7 @@ async function loadLedgerData() {
 
 function turnstileIsProduction(): boolean {
   try {
-    const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    if (typeof key !== "string" || key.trim().length === 0) return false;
-    return !key.startsWith("placeholder") && !key.startsWith("1x00000000000000000000AA");
+    return isTurnstileEnabled();
   } catch {
     return false;
   }
@@ -279,7 +278,7 @@ export default async function StatusPage() {
             {turnstileProd ? (
               <ChipOk>Mode Produksi Aktif</ChipOk>
             ) : (
-              <ChipUnknown>Mode Pengembangan (Dev)</ChipUnknown>
+              <ChipUnknown>Dinonaktifkan (Tanpa Captcha)</ChipUnknown>
             )}
           </LedgerRow>
         </dl>

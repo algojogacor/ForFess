@@ -8,14 +8,27 @@
  *   user yang jujur gara-gara Cloudflare down.
  */
 import { TURNSTILE_VERIFY_URL } from "@/constants";
-import { getTurnstileConfig } from "@/lib/config";
+import { getTurnstileConfig, isTurnstileEnabled } from "@/lib/config";
 import type { TurnstileResult } from "@/types/menfess";
 
 export async function verifyTurnstileToken(
-  token: string,
+  token?: string | null,
   remoteIp?: string
 ): Promise<TurnstileResult> {
+  // Jika Turnstile tidak diaktifkan / kuncinya dikosongkan, otomatis lolos tanpa Cloudflare
+  if (!isTurnstileEnabled()) {
+    return { success: true, softFail: true };
+  }
+
+  // Jika token placeholder atau kosong saat Turnstile tidak aktif
+  if (!token || token.trim() === "" || token.includes("placeholder") || token.includes("disabled")) {
+    return { success: true, softFail: true };
+  }
+
   const { secretKey } = getTurnstileConfig();
+  if (!secretKey) {
+    return { success: true, softFail: true };
+  }
 
   const body = new URLSearchParams({ secret: secretKey, response: token });
   if (remoteIp) body.set("remoteip", remoteIp);

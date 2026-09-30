@@ -42,8 +42,8 @@ export type SubmitResponse = SubmitSuccess | SubmitError;
 export interface SubmitRequestBody {
   /** Isi menfess dari user. */
   content: string;
-  /** Token dari widget Turnstile. */
-  turnstileToken: string;
+  /** Token dari widget Turnstile (opsional jika Turnstile dinonaktifkan). */
+  turnstileToken?: string;
   /** Honeypot anti-bot — harus kosong; kalau terisi, request dibuang diam-diam. */
   website?: string;
   /** Kategori opsional ("curhat", "lucu", …). Tidak valid / kosong → default. */

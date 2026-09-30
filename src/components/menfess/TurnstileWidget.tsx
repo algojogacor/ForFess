@@ -46,9 +46,9 @@ export function TurnstileWidget({
   const theme = resolvedTheme === "dark" ? "dark" : "light";
 
   useEffect(() => {
-    // Mode development: langsung set token placeholder.
+    // Mode tanpa captcha / Turnstile nonaktif: langsung set token.
     if (!widgetEnabled) {
-      onToken("development-placeholder");
+      onToken("turnstile-disabled");
       return;
     }
 
@@ -101,12 +101,12 @@ export function TurnstileWidget({
     // theme di-deps: ganti tema akan me-render ulang widget dengan tema cocok.
   }, [widgetEnabled, theme]);
 
-  // Mode dev: tidak ada widget yang perlu dirender.
+  // Mode tanpa captcha / Turnstile dikosongi:
   if (!widgetEnabled) {
     return (
       <p className="flex items-center gap-2 rounded-lg border-2 border-dashed border-ink/25 bg-paper-raised px-3.5 py-3 text-[13px] text-ink-faint">
-        <ShieldCheck className="size-4 shrink-0" aria-hidden />
-        Verifikasi keamanan: mode development (tanpa captcha).
+        <ShieldCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        Verifikasi keamanan: tanpa captcha (otomatis terkirim).
       </p>
     );
   }
