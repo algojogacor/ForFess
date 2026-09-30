@@ -101,14 +101,9 @@ export function TurnstileWidget({
     // theme di-deps: ganti tema akan me-render ulang widget dengan tema cocok.
   }, [widgetEnabled, theme]);
 
-  // Mode tanpa captcha / Turnstile dikosongi:
+  // Mode tanpa captcha / Turnstile dikosongi: sembunyikan tampilan widget secara bersih
   if (!widgetEnabled) {
-    return (
-      <p className="flex items-center gap-2 rounded-lg border-2 border-dashed border-ink/25 bg-paper-raised px-3.5 py-3 text-[13px] text-ink-faint">
-        <ShieldCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-        Verifikasi keamanan: tanpa captcha (otomatis terkirim).
-      </p>
-    );
+    return null;
   }
 
   if (scriptFailed) {

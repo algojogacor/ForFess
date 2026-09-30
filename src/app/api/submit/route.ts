@@ -14,6 +14,7 @@ import {
   SITE_URL,
   MENFESS_CATEGORY_IDS,
   DEFAULT_CATEGORY,
+} from "@/constants";
 import { isDryRun, isTurnstileEnabled } from "@/lib/config";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
