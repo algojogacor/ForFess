@@ -19,6 +19,10 @@ import {
   frauncesRegularMeta,
   frauncesBoldBase64,
   frauncesBoldMeta,
+  notoArabicRegularBase64,
+  notoArabicRegularMeta,
+  notoArabicBoldBase64,
+  notoArabicBoldMeta,
 } from "@/lib/fonts.generated";
 import fs from "fs";
 import path from "path";
@@ -30,6 +34,7 @@ import {
   type PostTheme,
 } from "@/lib/post-template";
 import { loadEmoji } from "@/lib/emoji";
+import { loadDynamicFont } from "@/lib/dynamic-fonts";
 
 function decodeBase64Font(b64: string): Buffer {
   return Buffer.from(b64, "base64");
@@ -43,6 +48,8 @@ const SATORI_FONTS = [
   { ...spaceMonoRegularMeta, data: decodeBase64Font(spaceMonoRegularBase64) },
   { ...frauncesRegularMeta, data: decodeBase64Font(frauncesRegularBase64) },
   { ...frauncesBoldMeta, data: decodeBase64Font(frauncesBoldBase64) },
+  { ...notoArabicRegularMeta, data: decodeBase64Font(notoArabicRegularBase64) },
+  { ...notoArabicBoldMeta, data: decodeBase64Font(notoArabicBoldBase64) },
 ];
 
 export type RenderCardOptions = BuildTemplateOptions;
@@ -74,9 +81,9 @@ export async function renderMenfessCard(
     fonts: SATORI_FONTS as any,
     loadAdditionalAsset: async (code: string, segment: string) => {
       if (code === "emoji") {
-        return (await loadEmoji(segment)) ?? [];
+        return (await loadEmoji(segment)) ?? "";
       }
-      return [];
+      return await loadDynamicFont(code, segment);
     },
   });
 

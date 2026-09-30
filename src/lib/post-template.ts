@@ -258,22 +258,26 @@ export interface TemplateFonts {
 }
 
 export const SATORI_FONTS_REF: TemplateFonts = {
-  serif: "Fraunces",
-  grotesk: "Space Grotesk",
-  mono: "Space Mono",
+  serif: '"Fraunces", "Noto Sans Arabic"',
+  grotesk: '"Space Grotesk", "Noto Sans Arabic"',
+  mono: '"Space Mono", "Noto Sans Arabic"',
 };
 
 export const CSS_FONTS_REF: TemplateFonts = {
-  serif: "var(--font-fraunces), Georgia, serif",
-  grotesk: "var(--font-grotesk)",
-  mono: "var(--font-spacemono)",
+  serif: 'var(--font-fraunces), "Noto Sans Arabic", Georgia, serif',
+  grotesk: 'var(--font-grotesk), "Noto Sans Arabic"',
+  mono: 'var(--font-spacemono), "Noto Sans Arabic"',
 };
 
 export interface SatoriNode {
   type: string;
   props: {
+    src?: string;
+    width?: number;
+    height?: number;
     style?: Record<string, unknown>;
     children?: string | SatoriNode | (SatoriNode | string)[];
+    [key: string]: unknown;
   };
 }
 

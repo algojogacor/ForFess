@@ -11,7 +11,7 @@ function createPrismaClient(): PrismaClient {
     connectionString &&
     (connectionString.startsWith("postgresql:") || connectionString.startsWith("postgres:"))
   ) {
-    const adapter = new PrismaNeonHTTP(connectionString);
+    const adapter = new PrismaNeonHTTP(connectionString, {});
     return new PrismaClient({
       adapter,
       log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],

@@ -110,7 +110,7 @@ export function PostPreview({
           <p
             className="w-full whitespace-pre-wrap"
             style={{
-              fontFamily: "var(--font-fraunces), Georgia, serif",
+              fontFamily: 'var(--font-fraunces), "Noto Sans Arabic", Georgia, serif',
               fontWeight: tier.weight,
               fontSize: canvasToCqw(tier.fontSize),
               lineHeight: tier.lineHeight,
