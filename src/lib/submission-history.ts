@@ -23,6 +23,10 @@ export interface SubmissionRecord {
   permalink?: string;
   /** True jika pipeline berjalan dalam mode dry-run (belum tayang beneran). */
   dryRun: boolean;
+  /** True jika menfess masuk antrean otomatis (kuota Instagram penuh). */
+  queued?: boolean;
+  /** Posisi dalam antrean (jika queued: true). */
+  queuePosition?: number;
   /** Epoch ms saat submit sukses. */
   at: number;
 }
@@ -86,6 +90,8 @@ export function saveSubmission(input: {
   theme?: string;
   permalink?: string;
   dryRun: boolean;
+  queued?: boolean;
+  queuePosition?: number;
 }): SubmissionRecord | null {
   if (typeof window === "undefined") return null;
   try {
@@ -97,6 +103,8 @@ export function saveSubmission(input: {
       ...(input.theme ? { theme: input.theme } : {}),
       ...(input.permalink ? { permalink: input.permalink } : {}),
       dryRun: input.dryRun,
+      ...(input.queued ? { queued: true } : {}),
+      ...(input.queuePosition != null ? { queuePosition: input.queuePosition } : {}),
       at: Date.now(),
     };
     const existing = listSubmissions();

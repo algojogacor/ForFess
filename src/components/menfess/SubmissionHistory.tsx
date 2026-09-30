@@ -126,11 +126,13 @@ export function SubmissionHistory() {
                   className={
                     record.dryRun
                       ? "inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-tomato-deep"
-                      : "inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed"
+                      : record.queued
+                        ? "inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal/40 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink"
+                        : "inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink-fixed"
                   }
                 >
                   <UserRound className="size-3" aria-hidden />
-                  {record.dryRun ? "Uji coba (dry-run)" : "Tayang"}
+                  {record.dryRun ? "Uji coba (dry-run)" : record.queued ? "⏳ Mengantre" : "Tayang"}
                 </span>
                 {record.ticketCode ? (
                   <span
@@ -160,7 +162,15 @@ export function SubmissionHistory() {
                 >
                   {relativeDate(record.at)}
                 </time>
-                {record.permalink ? (
+                {record.queued ? (
+                  <a
+                    href="/antrean"
+                    className="ml-auto inline-flex items-center gap-1 text-[13px] font-semibold text-ink underline decoration-signal decoration-[3px] underline-offset-4 hover:decoration-tomato"
+                  >
+                    Cek Papan Antrean
+                    <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                ) : record.permalink ? (
                   <a
                     href={record.permalink}
                     target="_blank"

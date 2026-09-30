@@ -34,6 +34,12 @@ export interface SubmitSuccess {
   ticketCode?: string;
   /** Tema warna kartu yang dipilih. */
   theme?: string;
+  /** True jika postingan dialihkan ke antrean karena kuota penuh. */
+  queued?: boolean;
+  /** Posisi antrean jika masuk antrean. */
+  queuePosition?: number;
+  /** Pesan konfirmasi / status untuk user. */
+  message?: string;
 }
 
 export type SubmitResponse = SubmitSuccess | SubmitError;

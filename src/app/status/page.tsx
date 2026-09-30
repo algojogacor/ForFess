@@ -7,8 +7,10 @@ import { cookies } from "next/headers";
 import { STATUS_COOKIE_NAME, verifyStatusAuthToken } from "@/lib/status-auth";
 import { StatusPinGate } from "@/components/status/StatusPinGate";
 import { StatusLockBtn } from "@/components/status/StatusLockBtn";
+import { QueueFlushBtn } from "@/components/status/QueueFlushBtn";
 import { IG_HANDLE, IG_PROFILE_URL, IG_QUOTA_BUFFER } from "@/constants";
 import { checkLimit, listRecentMedia, InstagramError } from "@/lib/instagram";
+import { getQueueStats } from "@/lib/queue";
 import { db } from "@/lib/db";
 import { isTurnstileEnabled } from "@/lib/config";
 import { cn } from "@/lib/utils";
@@ -28,15 +30,17 @@ export const metadata: Metadata = {
 };
 
 async function loadLedgerData() {
-  const [quotaRes, mediaRes, dbRes] = await Promise.allSettled([
+  const [quotaRes, mediaRes, dbRes, queueRes] = await Promise.allSettled([
     checkLimit(),
     listRecentMedia(6),
     db.fessReaction.count(),
+    getQueueStats(),
   ]);
 
   const quota = quotaRes.status === "fulfilled" ? quotaRes.value : null;
   const recentCount = mediaRes.status === "fulfilled" ? mediaRes.value.length : null;
   const dbReactionsCount = dbRes.status === "fulfilled" ? dbRes.value : null;
+  const queueStats = queueRes.status === "fulfilled" ? queueRes.value : null;
 
   if (quotaRes.status === "rejected") {
     console.warn(
@@ -61,7 +65,7 @@ async function loadLedgerData() {
     console.error("[status] Cek database gagal:", dbError);
   }
 
-  return { quota, recentCount, dbReactionsCount, dbError };
+  return { quota, recentCount, dbReactionsCount, dbError, queueStats };
 }
 
 function turnstileIsProduction(): boolean {
@@ -142,7 +146,7 @@ export default async function StatusPage() {
     return <StatusPinGate />;
   }
 
-  const { quota, recentCount, dbReactionsCount, dbError } = await loadLedgerData();
+  const { quota, recentCount, dbReactionsCount, dbError, queueStats } = await loadLedgerData();
   const turnstileProd = turnstileIsProduction();
   const checkedAt = formatCheckedAt(new Date());
 
@@ -279,6 +283,38 @@ export default async function StatusPage() {
               <ChipOk>Mode Produksi Aktif</ChipOk>
             ) : (
               <ChipUnknown>Dinonaktifkan (Tanpa Captcha)</ChipUnknown>
+            )}
+          </LedgerRow>
+
+          {/* ---- Queue Engine Ledger ---- */}
+          <LedgerRow
+            label="Queue Engine Antrean Menfess"
+            desc="Antrean otomatis menfess saat kuota Instagram harian habis — diproses setiap awal jam via Vercel Cron"
+          >
+            {queueStats === null ? (
+              <ChipUnknown>Tidak bisa dicek</ChipUnknown>
+            ) : (
+              <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-ink/25 bg-signal/40 px-2 py-0.5 font-mono text-[11px] font-bold text-ink">
+                    ⏳ {queueStats.pending} Mengantre
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-ink/25 bg-paper px-2 py-0.5 font-mono text-[11px] font-bold text-ink-soft">
+                    ✓ {queueStats.published} Tayang
+                  </span>
+                  {queueStats.failed > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold text-tomato-deep">
+                      ✗ {queueStats.failed} Gagal
+                    </span>
+                  )}
+                </div>
+                {queueStats.processing > 0 && (
+                  <span className="font-mono text-[10px] text-ink-faint">
+                    {queueStats.processing} sedang diproses...
+                  </span>
+                )}
+                <QueueFlushBtn />
+              </div>
             )}
           </LedgerRow>
         </dl>

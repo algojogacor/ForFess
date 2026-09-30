@@ -42,3 +42,30 @@ model ActiveSession {
 
   @@index([lastSeen])
 }
+
+enum QueueStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+/// Antrean posting otomatis menfess ketika kuota Instagram harian habis.
+model MenfessQueue {
+  id           String      @id @default(cuid())
+  ticketCode   String      @unique
+  content      String      @db.Text
+  category     String      @default("random")
+  theme        String      @default("klasik")
+  status       QueueStatus @default(PENDING)
+  attempts     Int         @default(0)
+  lastError    String?     @db.Text
+  mediaId      String?
+  permalink    String?
+  createdAt    DateTime    @default(now())
+  scheduledFor DateTime    @default(now())
+  publishedAt  DateTime?
+
+  @@index([status, scheduledFor, createdAt])
+  @@index([ticketCode])
+}

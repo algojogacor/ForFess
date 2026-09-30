@@ -7,6 +7,7 @@ import {
   RotateCcw,
   ExternalLink,
   PartyPopper,
+  Hourglass,
   Eye,
   History,
   Trash2,
@@ -15,6 +16,7 @@ import {
   Check,
   Copy,
 } from "lucide-react";
+import Link from "next/link";
 import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL, IG_HANDLE, DEFAULT_CATEGORY } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -38,6 +40,8 @@ interface SuccessInfo {
   dryRun?: boolean;
   ticketCode?: string;
   theme?: PostTheme;
+  queued?: boolean;
+  queuePosition?: number;
 }
 
 /** Bentuk draf yang disimpan di localStorage (v3 — dengan kategori & tema). */
@@ -236,12 +240,16 @@ export function MenfessForm() {
             theme,
             permalink: data.permalink,
             dryRun: Boolean(data.dryRun),
+            queued: Boolean(data.queued),
+            queuePosition: data.queuePosition,
           });
           setSuccess({
             permalink: data.permalink,
             dryRun: data.dryRun,
             ticketCode: data.ticketCode,
             theme,
+            queued: data.queued,
+            queuePosition: data.queuePosition,
           });
           setStatus("success");
           return;
@@ -330,6 +338,87 @@ export function MenfessForm() {
 
   // ---- Panel sukses menggantikan seluruh form ----
   if (status === "success" && success) {
+    // ---- Panel khusus: masuk antrean otomatis ----
+    if (success.queued) {
+      return (
+        <div className="animate-pop rounded-2xl border-2 border-ink bg-paper-raised p-6 sm:p-10">
+          <div className="flex flex-col items-center gap-5 text-center">
+            <span className="grid size-16 place-items-center rounded-2xl border-2 border-ink bg-signal">
+              <Hourglass className="size-8 text-ink-fixed" aria-hidden />
+            </span>
+
+            {/* Chip status antrean */}
+            <span className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-signal px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink-fixed shadow-[2px_2px_0_0_#1B1710] dark:border-[#70685b] dark:shadow-[2px_2px_0_0_#000]">
+              ⏳ MASUK ANTREAN OTOMATIS
+            </span>
+
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Kuota Hari Ini Penuh · Menfessmu Aman!
+            </h2>
+            <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+              Menfess kamu sudah terdaftar dengan tiket resmi. Begitu kuota
+              posting Instagram reset, kartu akan otomatis diterbitkan.
+            </p>
+
+            {/* Nomor Tiket & Posisi Antrean */}
+            {success.ticketCode ? (
+              <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-ink bg-paper px-6 py-4 shadow-[3px_3px_0_0_var(--hard-soft)]">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink-faint">
+                  Nomor Tiket Antrean
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-2xl font-extrabold tracking-widest text-ink">
+                    NO. {success.ticketCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyTicket(success.ticketCode!)}
+                    title="Salin nomor tiket"
+                    className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-paper-raised px-2.5 py-1 font-mono text-[12px] font-bold uppercase tracking-wide transition-colors hover:bg-signal"
+                  >
+                    {ticketCopied ? (
+                      <>
+                        <Check className="size-3.5 text-tomato-deep" aria-hidden />
+                        Tersalin
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5" aria-hidden />
+                        Salin
+                      </>
+                    )}
+                  </button>
+                </div>
+                {success.queuePosition != null && (
+                  <p className="font-mono text-sm font-bold text-ink">
+                    Posisi antrean:{" "}
+                    <span className="text-tomato-deep">ke-{success.queuePosition}</span>
+                  </p>
+                )}
+                <p className="text-[12px] text-ink-faint">
+                  Simpan tiket ini — diproses secara FIFO setiap awal jam.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/antrean"
+                className={cn(buttonVariants({ variant: "ink", size: "lg" }))}
+              >
+                Lihat Papan Antrean
+                <ExternalLink className="size-4" aria-hidden />
+              </Link>
+              <Button variant="outline" size="lg" onClick={resetForm}>
+                <RotateCcw className="size-4" aria-hidden />
+                Kirim Menfess Lain
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="animate-pop rounded-2xl border-2 border-ink bg-paper-raised p-6 sm:p-10">
         <div className="flex flex-col items-center gap-5 text-center">
