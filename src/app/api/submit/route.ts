@@ -32,6 +32,7 @@ import {
 import { validateMenfessText } from "@/lib/validate";
 import { generateTicketCode, isPostTheme, type PostTheme } from "@/lib/post-template";
 import { buildMenfessCaption } from "@/lib/caption";
+import { enqueueMenfess } from "@/lib/queue";
 import type { SubmitRequestBody, SubmitErrorCode, SubmitResponse } from "@/types/menfess";
 
 // Pipeline butuh Node runtime (Satori + sharp + SDK Cloudinary).
@@ -125,11 +126,35 @@ export async function POST(request: Request) {
   try {
     const quota = await checkLimit();
     if (quota.remaining <= IG_QUOTA_BUFFER) {
-      return fail(
-        "QUOTA_EXCEEDED",
-        `Kuota posting otomatis Instagram untuk 24 jam terakhir udah mentok (${quota.used}/${quota.total}). Menfess kamu bisa dikirim lagi besok — kuota akan kembali sendiri.`,
-        429
-      );
+      const ticketCode = generateTicketCode();
+      try {
+        const queueResult = await enqueueMenfess({
+          ticketCode,
+          content,
+          category,
+          theme,
+        });
+
+        console.log(
+          `[submit] Kuota habis (${quota.used}/${quota.total}). Menfess NO.${ticketCode} dimasukkan ke antrean #${queueResult.queuePosition}`
+        );
+
+        return NextResponse.json<SubmitResponse>({
+          ok: true,
+          queued: true,
+          ticketCode,
+          theme,
+          queuePosition: queueResult.queuePosition,
+          message: `Kuota posting otomatis Instagram untuk 24 jam terakhir sudah penuh (${quota.used}/${quota.total}). Menfess kamu aman di antrean ke-${queueResult.queuePosition} (NO. ${ticketCode}) dan otomatis diposting saat kuota tersedia.`,
+        });
+      } catch (queueErr) {
+        console.error("[submit] gagal enqueue menfess ke database:", queueErr);
+        return fail(
+          "INTERNAL_ERROR",
+          "Gagal memasukkan menfess ke dalam antrean. Silakan coba kirim kembali beberapa saat lagi.",
+          500
+        );
+      }
     }
   } catch (err) {
     // Jangan blokir user hanya karena pengecekan kuota gagal.
