@@ -23,6 +23,7 @@ function useMounted() {
 const NAV_LINKS = [
   { href: "/kirim", label: "Kirim" },
   { href: "/arsip", label: "Arsip" },
+  { href: "/antrean", label: "Antrean" },
   { href: "/acak", label: "Acak" },
   { href: "/tersimpan", label: "Tersimpan" },
   { href: "/about", label: "Tentang" },
