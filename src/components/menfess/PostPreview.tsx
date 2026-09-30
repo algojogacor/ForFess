@@ -8,7 +8,7 @@ import {
   previewTicketCode,
   type PostTheme,
 } from "@/lib/post-template";
-import { SITE_URL_SHORT } from "@/constants";
+import { IG_HANDLE, SITE_URL_SHORT } from "@/constants";
 import { cn } from "@/lib/utils";
 
 /** Tanggal pratinjau — dihitung sekali per pemuatan modul. */
@@ -89,7 +89,7 @@ export function PostPreview({
                 color: c.ink,
               }}
             >
-              FESS UNAIR
+              FESS UNERR
             </span>
           </div>
           <span
@@ -139,7 +139,7 @@ export function PostPreview({
               className="font-mono font-bold"
               style={{ fontSize: canvasToCqw(27), letterSpacing: canvasToCqw(1), color: c.ink }}
             >
-              @fess_unair
+              {IG_HANDLE}
             </span>
             <span
               className="font-mono"

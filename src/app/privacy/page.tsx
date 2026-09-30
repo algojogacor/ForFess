@@ -5,7 +5,7 @@ import { IG_HANDLE } from "@/constants";
 export const metadata: Metadata = {
   title: "Kebijakan Privasi",
   description:
-    "Data apa yang diproses Fess UNAIR, apa yang tidak kami minta, dan bagaimana gambar menfess ditangani.",
+    "Data apa yang diproses Fess UNERR, apa yang tidak kami minta, dan bagaimana gambar menfess ditangani.",
 };
 
 /** Section legal dengan penomoran mono biar konsisten dengan halaman ketentuan. */

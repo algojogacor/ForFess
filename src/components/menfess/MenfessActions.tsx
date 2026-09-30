@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Download, Link2, Loader2, Quote, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { SITE_URL } from "@/constants";
+import { IG_HANDLE, SITE_URL } from "@/constants";
 
 /**
  * Tombol aksi di halaman /fess/[id]: bagikan (Web Share API dengan
@@ -15,7 +15,7 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
   const pageUrl = `${SITE_URL}/fess/${fessId}`;
   const shareText = text
     ? `Menfess: "${text.slice(0, 80)}${text.length > 80 ? "…" : ""}"`
-    : "Menfess anonim dari @fess_unair";
+    : `Menfess anonim dari ${IG_HANDLE}`;
 
   const [shared, setShared] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -34,7 +34,7 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
   const handleShare = async () => {
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "Fess UNAIR", text: shareText, url: pageUrl });
+        await navigator.share({ title: "Fess UNERR", text: shareText, url: pageUrl });
         setShared(true);
         setTimeout(() => setShared(false), 2000);
         return;
@@ -86,7 +86,7 @@ export function MenfessActions({ fessId, text }: { fessId: string; text: string 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `fess-unair-${fessId}.png`;
+      a.download = `fess-unerr-${fessId}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();

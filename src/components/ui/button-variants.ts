@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
 /**
- * Varian visual Button brand Fess UNAIR — file biasa (bukan "use client")
+ * Varian visual Button brand Fess UNERR — file biasa (bukan "use client")
  * supaya bisa dipakai untuk styling Link di Server Components.
  */
 export const buttonVariants = cva(

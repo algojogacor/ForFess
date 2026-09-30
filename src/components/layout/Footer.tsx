@@ -17,10 +17,10 @@ export function Footer() {
           {/* Brand + disclaimer */}
           <div>
             <p className="text-2xl font-bold tracking-tight">
-              fess<span className="text-signal">*</span>unair
+              fess<span className="text-signal">*</span>unerr
             </p>
             <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-inverse-fg/70">
-              Platform menfess anonim buat warga UNAIR. Tulis apa yang belum
+              Platform menfess anonim buat warga UNERR. Tulis apa yang belum
               kamu bilang — sisanya biar tanda bintang yang bicara.
             </p>
             <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-inverse-fg/50">
@@ -96,7 +96,7 @@ export function Footer() {
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0px)" }}
         >
           <span>
-            © {year} Fess UNAIR — dibuat mahasiswa, buat mahasiswa.
+            © {year} Fess UNERR — dibuat mahasiswa, buat mahasiswa.
           </span>
           <span>{SITE_HOST}</span>
         </div>

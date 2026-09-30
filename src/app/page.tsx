@@ -19,7 +19,7 @@ const TICKER_ITEMS = [
   "TANPA LOGIN",
   "MAKS 500 KARAKTER",
   `LANGSUNG KE ${IG_HANDLE}`,
-  "CIVITAS UNAIR",
+  "CIVITAS UNERR",
   "TANPA ANTRE MODERASI",
   "KATEGORI OPSIONAL",
 ];
@@ -99,7 +99,7 @@ const FAQS = [
   },
   {
     q: "Ini akun resmi Universitas Airlangga?",
-    a: `Bukan. Fess UNAIR adalah proyek independen buatan mahasiswa dan nggak berafiliasi apa pun dengan Universitas Airlangga. Semua isi menfess adalah tanggung jawab pengirimnya masing-masing.`,
+    a: `Bukan. Fess UNERR adalah proyek independen buatan mahasiswa dan nggak berafiliasi apa pun dengan Universitas Airlangga. Semua isi menfess adalah tanggung jawab pengirimnya masing-masing.`,
   },
 ];
 
@@ -154,7 +154,7 @@ export default function LandingPage() {
               className="mt-6 max-w-xl animate-rise text-lg leading-relaxed text-ink-soft"
               style={{ animationDelay: "140ms" }}
             >
-              Fess UNAIR nampung curhat, kabar, pengakuan, sampai uneg-uneg
+              Fess UNERR nampung curhat, kabar, pengakuan, sampai uneg-uneg
               kamu — tanpa nama, tanpa akun, tanpa antre moderasi. Tulis,
               kirim, langsung tayang di {IG_HANDLE}.
             </p>

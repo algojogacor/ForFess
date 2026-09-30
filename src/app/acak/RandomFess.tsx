@@ -112,7 +112,7 @@ export function RandomFess() {
     const url = `${SITE_URL}/fess/${card.id}`;
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "Fess UNAIR", url });
+        await navigator.share({ title: "Fess UNERR", url });
         return;
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;

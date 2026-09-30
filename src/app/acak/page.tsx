@@ -1,6 +1,6 @@
 /**
  * Halaman /acak — "kocok kartu".
- * Satu tombol, satu kartu sembarang dari arsip @fess_unair.
+ * Satu tombol, satu kartu sembarang dari arsip @fess_uner.
  * Bagi yang nggak mau nyari-nyari: tekan kocok, baca, ulangi.
  *
  * Halaman ini sengaja noindex (isinya berubah tiap request); kartu
@@ -10,13 +10,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Dices } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { IG_HANDLE } from "@/constants";
 import { RandomFess } from "./RandomFess";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Kartu acak — kocok arsip menfess",
   description:
-    "Nggak mau nyari-nyari? Kocok arsip dan baca satu menfess sembarang dari warga UNAIR.",
+    "Nggak mau nyari-nyari? Kocok arsip dan baca satu menfess sembarang dari warga UNERR.",
   robots: { index: false, follow: true },
   alternates: { canonical: "/acak" },
 };
@@ -35,8 +36,8 @@ export default function AcakPage() {
             Kocok. <span className="marker-highlight">Baca.</span> Kaget.
           </h1>
           <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">
-            Satu menfess sembarang dari arsip {""}
-            <span className="font-semibold text-ink">@fess_unair</span> — curhatan
+            Satu menfess sembarang dari arsip{" "}
+            <span className="font-semibold text-ink">{IG_HANDLE}</span> — curhatan
             orang yang mungkin lagi nunggu antrean FK, atau baru keluar lab.
             Nggak cocok? Kocok lagi.
           </p>

@@ -10,7 +10,7 @@ import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";
 export const metadata: Metadata = {
   title: "Arsip",
   description:
-    "Kumpulan menfess terbaru yang sudah tayang di @fess_unair — diambil langsung dari Instagram.",
+    `Kumpulan menfess terbaru yang sudah tayang di ${IG_HANDLE} — diambil langsung dari Instagram.`,
 };
 
 export default function ArsipPage() {

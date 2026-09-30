@@ -13,7 +13,7 @@ import {
   spaceMonoRegularBase64,
 } from "@/lib/fonts.generated";
 
-export const alt = "Fess UNAIR — menfess anonim buat warga UNAIR, langsung tayang di @fess_unair";
+export const alt = "Fess UNERR — menfess anonim buat warga UNERR, langsung tayang di @fess_uner";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
@@ -79,7 +79,7 @@ export default async function OpengraphImage() {
                   fontFamily: "Space Mono",
                 }}
               >
-                Menfess anonim · civitas UNAIR
+                Menfess anonim · civitas UNERR
               </div>
             </div>
 
@@ -131,7 +131,7 @@ export default async function OpengraphImage() {
                 }}
               >
                 <span style={{ display: "flex", color: "#FFC800" }}>*</span>
-                @fess_unair
+                @fess_uner
               </div>
               <div
                 style={{
@@ -218,7 +218,7 @@ export default async function OpengraphImage() {
                     fontFamily: "Space Mono",
                   }}
                 >
-                  @fess_unair
+                  @fess_uner
                 </div>
                 <div
                   style={{

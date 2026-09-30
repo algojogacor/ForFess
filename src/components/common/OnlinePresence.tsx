@@ -111,7 +111,7 @@ export function OnlinePresence({
           "flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-soft",
           className
         )}
-        title={`${onlineCount} mahasiswa sedang membuka situs Fess UNAIR`}
+        title={`${onlineCount} mahasiswa sedang membuka situs Fess UNERR`}
       >
         <span className="relative flex size-2.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -132,7 +132,7 @@ export function OnlinePresence({
         "inline-flex items-center gap-2 rounded-full border border-ink/20 bg-paper-raised/80 px-2.5 py-1 backdrop-blur-sm transition-colors hover:border-ink/40",
         className
       )}
-      title={`${onlineCount} mahasiswa sedang aktif di web Fess UNAIR`}
+      title={`${onlineCount} mahasiswa sedang aktif di web Fess UNERR`}
       role="status"
       aria-label={`${onlineCount} mahasiswa online`}
     >

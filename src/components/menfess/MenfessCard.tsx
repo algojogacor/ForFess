@@ -59,7 +59,7 @@ async function shareOrCopy(item: ArchiveItem, excerpt: string): Promise<"shared"
 
   if (typeof navigator.share === "function") {
     try {
-      await navigator.share({ title: "Fess UNAIR", text, url });
+      await navigator.share({ title: "Fess UNERR", text, url });
       return "shared";
     } catch (err) {
       // User batal share (AbortError) — bukan kegagalan, jangan fallback.

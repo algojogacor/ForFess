@@ -5,7 +5,7 @@
  *  - PostPreview.tsx    → CSS container query (cqw) persis dimensi 1080x1080 (client)
  * Jadi preview di form & beranda 100% identik dengan hasil posting di Instagram.
  */
-import { SITE_URL_SHORT } from "@/constants";
+import { IG_HANDLE, SITE_URL_SHORT } from "@/constants";
 
 /* == Tema Warna Kartu == */
 
@@ -160,7 +160,7 @@ export const POST_THEME_META: Record<
   },
   kuning: {
     label: "Kuning Signal",
-    desc: "Kuning cerah khas UNAIR",
+    desc: "Kuning cerah khas UNERR",
     bg: "#F8F3E9",
     ink: "#1B1710",
     accent: "#F7DE4E",
@@ -350,7 +350,7 @@ export function buildTemplateNode(
             children: "*",
           },
         },
-        // Header: Chip * + FESS UNAIR di kiri, Date + NO. [TICKET] di kanan
+        // Header: Chip * + FESS UNERR di kiri, Date + NO. [TICKET] di kanan
         {
           type: "div",
           props: {
@@ -407,7 +407,7 @@ export function buildTemplateNode(
                           letterSpacing: "7px",
                           color: c.ink,
                         },
-                        children: "FESS UNAIR",
+                        children: "FESS UNERR",
                       },
                     },
                   ],
@@ -514,7 +514,7 @@ export function buildTemplateNode(
                           letterSpacing: "1px",
                           color: c.ink,
                         },
-                        children: "@fess_unair",
+                        children: IG_HANDLE,
                       },
                     },
                     {
@@ -586,7 +586,7 @@ export function buildSlide2TemplateNode(
   const c = POST_THEME_COLORS[themeKey] ?? POST_THEME_COLORS.klasik;
   const serifFont = fonts.serif ?? "Fraunces";
   const monoFont = fonts.mono ?? "Space Mono";
-  const greenAccent = "#1B4332"; // Aksen hijau tua Fess UNAIR
+  const greenAccent = "#1B4332"; // Aksen hijau tua Fess UNERR
 
   return {
     type: "div",
@@ -619,7 +619,7 @@ export function buildSlide2TemplateNode(
             children: "*",
           },
         },
-        // Header: Chip * + FESS UNAIR di kiri, KIRIM SEKARANG di kanan
+        // Header: Chip * + FESS UNERR di kiri, KIRIM SEKARANG di kanan
         {
           type: "div",
           props: {
@@ -676,7 +676,7 @@ export function buildSlide2TemplateNode(
                           letterSpacing: "7px",
                           color: c.ink,
                         },
-                        children: "FESS UNAIR",
+                        children: "FESS UNERR",
                       },
                     },
                   ],
@@ -837,7 +837,7 @@ export function buildSlide2TemplateNode(
                           letterSpacing: "1px",
                           color: c.ink,
                         },
-                        children: "@fess_unair",
+                        children: IG_HANDLE,
                       },
                     },
                     {

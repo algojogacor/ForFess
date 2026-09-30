@@ -1,5 +1,5 @@
 /**
- * Arsip menfess — ambil postingan terbaru @fess_unair dari Instagram Graph API.
+ * Arsip menfess — ambil postingan terbaru @fess_uner dari Instagram Graph API.
  *
  * Pagination server-side:
  * - Tanpa `?cursor=` → halaman pertama (dari pool bersama, hemat kuota).

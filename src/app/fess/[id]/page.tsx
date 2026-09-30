@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? `“${excerptOfText(text, 60)}” — menfess ${IG_HANDLE}`
     : `Kartu menfess — ${IG_HANDLE}`;
   const description = text
-    ? `Satu cerita anonim dari civitas UNAIR, tayang di ${IG_HANDLE}.`
+    ? `Satu cerita anonim dari civitas UNERR, tayang di ${IG_HANDLE}.`
     : `Kartu menfess anonim dari ${IG_HANDLE}.`;
 
   return {

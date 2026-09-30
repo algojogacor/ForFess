@@ -5,7 +5,7 @@ import { IG_HANDLE } from "@/constants";
 export const metadata: Metadata = {
   title: "Ketentuan Layanan",
   description:
-    "Aturan penggunaan Fess UNAIR: apa yang boleh dikirim, apa yang dilarang, dan bagaimana penanganan pelaporan.",
+    "Aturan penggunaan Fess UNERR: apa yang boleh dikirim, apa yang dilarang, dan bagaimana penanganan pelaporan.",
 };
 
 function Section({
@@ -49,7 +49,7 @@ export default function TermsPage() {
       <div className="mt-10 space-y-8">
         <Section num="01" title="Tentang layanan">
           <p>
-            Fess UNAIR adalah layanan gratis untuk mengirim pesan anonim yang
+            Fess UNERR adalah layanan gratis untuk mengirim pesan anonim yang
             dipublikasikan otomatis ke akun Instagram {IG_HANDLE}. Layanan
             disediakan &ldquo;sebagaimana adanya&rdquo; tanpa jaminan
             ketersediaan tanpa gangguan. Untuk menjaga sistem, ada batas
@@ -91,7 +91,7 @@ export default function TermsPage() {
 
         <Section num="04" title="Tanggung jawab">
           <p>
-            Seluruh isi menfess adalah tanggung jawab pengirimnya. Fess UNAIR
+            Seluruh isi menfess adalah tanggung jawab pengirimnya. Fess UNERR
             tidak terlibat dan tidak menjadi pihak dalam sengketa antar
             pihak yang muncul dari isi kiriman. Penggunaan layanan ini bukan
             pengganti kanal resmi kampus untuk urusan administrasi atau

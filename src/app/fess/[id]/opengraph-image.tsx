@@ -21,7 +21,7 @@ import {
 import { findCategory, IG_HANDLE } from "@/constants";
 
 export const runtime = "nodejs";
-export const alt = "Kartu menfess anonim — Fess UNAIR";
+export const alt = "Kartu menfess anonim — Fess UNERR";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -98,7 +98,7 @@ export default async function OpengraphImage({
               fontFamily: "Space Grotesk",
             }}
           >
-            Fess UNAIR
+            Fess UNERR
           </div>
           <div
             style={{
@@ -184,7 +184,7 @@ export default async function OpengraphImage({
                   fontFamily: "Space Grotesk",
                 }}
               >
-                Fess UNAIR
+                Fess UNERR
               </div>
             </div>
             <div

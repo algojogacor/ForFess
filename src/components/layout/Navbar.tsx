@@ -30,7 +30,7 @@ const NAV_LINKS = [
   { href: "/terms", label: "Ketentuan" },
 ] as const;
 
-/** Logo Fess UNAIR — blok tinta dengan bintang kuning (motif anonimitas).
+/** Logo Fess UNERR — blok tinta dengan bintang kuning (motif anonimitas).
  *  Hover: bintang berputar 120° (simetri tiga batangnya) — terasa "mendarat"
  *  kembali ke bentuk yang sama, bukan sekadar miring. */
 function LogoMark({ className }: { className?: string }) {
@@ -120,11 +120,11 @@ export function Navbar() {
           <Link
             href="/"
             className="group flex items-center gap-2.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 rounded-lg"
-            aria-label="Fess UNAIR — halaman utama"
+            aria-label="Fess UNERR — halaman utama"
           >
             <LogoMark />
             <span className="text-lg font-bold tracking-tight">
-              fess<span className="text-tomato">*</span>unair
+              fess<span className="text-tomato">*</span>unerr
             </span>
           </Link>
           <OnlinePresence className="hidden sm:inline-flex" />

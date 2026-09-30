@@ -22,9 +22,9 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Status Layanan · Fess UNAIR",
+  title: "Status Layanan · Fess UNERR",
   description:
-    "Kondisi mesin, kuota posting otomatis Instagram Graph API, dan kesehatan service Fess UNAIR secara real-time.",
+    "Kondisi mesin, kuota posting otomatis Instagram Graph API, dan kesehatan service Fess UNERR secara real-time.",
 };
 
 async function loadLedgerData() {
@@ -182,7 +182,7 @@ export default async function StatusPage() {
         {/* Header Baris Buku Status */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b-2 border-ink bg-signal-soft/40 px-5 py-3 sm:px-6">
           <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-ink">
-            Fess UNAIR · Lembar Pemeriksaan
+            Fess UNERR · Lembar Pemeriksaan
           </span>
           <span className="font-mono text-[11px] font-bold uppercase tracking-widest tabular-nums text-ink-soft">
             Diperiksa: {checkedAt} WIB

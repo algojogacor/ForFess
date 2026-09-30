@@ -1,6 +1,6 @@
 /**
  * RSS feed — /feed.xml
- * Daftar menfess terbaru dari @fess_unair dalam format RSS 2.0, dengan
+ * Daftar menfess terbaru dari @fess_uner dalam format RSS 2.0, dengan
  * link ke halaman kartu lokal (/fess/[id]) bukan langsung ke IG — biar
  * pembaca feed dapat halaman yang cepat & rapi.
  *
@@ -68,9 +68,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Fess UNAIR — menfess anonim ${IG_HANDLE}</title>
+    <title>Fess UNERR — menfess anonim ${IG_HANDLE}</title>
     <link>${escapeXml(SITE_URL)}</link>
-    <description>Kartu menfess anonim terbaru dari civitas Universitas Airlangga, tayang otomatis di ${IG_HANDLE}.</description>
+    <description>Kartu menfess anonim terbaru dari civitas UNERR, tayang otomatis di ${IG_HANDLE}.</description>
     <language>id</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${escapeXml(`${SITE_URL}/feed.xml`)}" rel="self" type="application/rss+xml" />

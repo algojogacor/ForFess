@@ -9,7 +9,7 @@ import { IG_HANDLE, IG_PROFILE_URL } from "@/constants";
 export const metadata: Metadata = {
   title: "Tentang",
   description:
-    "Kenapa Fess UNAIR ada, bagaimana sistemnya bekerja, dan posisi platform ini terhadap Universitas Airlangga.",
+    "Kenapa Fess UNERR ada, bagaimana sistemnya bekerja, dan posisi platform ini terhadap Universitas Airlangga.",
 };
 
 export default function AboutPage() {
@@ -20,7 +20,7 @@ export default function AboutPage() {
         Tentang platform
       </p>
       <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-        Kenapa Fess UNAIR ada.
+        Kenapa Fess UNERR ada.
       </h1>
 
       <div className="mt-10 space-y-8 text-[17px] leading-relaxed text-ink-soft">
@@ -28,7 +28,7 @@ export default function AboutPage() {
           Kuliah itu penuh hal yang pengen dibahas tapi nggak selalu enak
           disampaikan pakai nama sendiri. Ada curhat soal skripsi, ada rasa
           terima kasih yang malu-malu, ada kabar yang lebih nyaman dibagikan
-          tanpa identitas. Fess UNAIR dibuat khusus untuk kebutuhan itu.
+          tanpa identitas. Fess UNERR dibuat khusus untuk kebutuhan itu.
         </p>
         <p>
           Prinsipnya sederhana:{" "}
@@ -43,7 +43,7 @@ export default function AboutPage() {
 
         <Alert variant="info" title="Bukan akun resmi kampus">
           <p>
-            Fess UNAIR adalah platform independen buatan mahasiswa.{" "}
+            Fess UNERR adalah platform independen buatan mahasiswa.{" "}
             <strong className="font-bold">
               Tidak berafiliasi dan tidak diwakili Universitas Airlangga.
             </strong>{" "}

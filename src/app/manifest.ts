@@ -7,10 +7,10 @@ import { SITE_URL } from "@/constants";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fess UNAIR — menfess anonim buat warga UNAIR",
-    short_name: "Fess UNAIR",
+    name: "Fess UNERR — menfess anonim buat warga UNERR",
+    short_name: "Fess UNERR",
     description:
-      "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_unair.",
+      "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_uner.",
     start_url: "/",
     scope: "/",
     display: "standalone",

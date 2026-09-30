@@ -27,7 +27,7 @@ export function KoleksiExport({ list }: { list: SavedFess[] }) {
       if (typeof navigator.share === "function") {
         try {
           await navigator.share({
-            title: `Koleksi Fess UNAIR (${list.length} kartu)`,
+            title: `Koleksi Fess UNERR (${list.length} kartu)`,
             text,
           });
           setDone(true);

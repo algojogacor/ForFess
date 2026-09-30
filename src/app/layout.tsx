@@ -41,25 +41,25 @@ const spaceMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Fess UNAIR — menfess anonim buat warga UNAIR",
-    template: "%s — Fess UNAIR",
+    default: "Fess UNERR — menfess anonim buat warga UNERR",
+    template: "%s — Fess UNERR",
   },
   description:
-    "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_unair.",
-  keywords: ["menfess", "unair", "fess unair", "anonim", "mahasiswa"],
+    "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_uner.",
+  keywords: ["menfess", "unerr", "fess unerr", "anonim", "mahasiswa"],
   openGraph: {
-    title: "Fess UNAIR",
+    title: "Fess UNERR",
     description:
-      "Menfess anonim buat warga UNAIR. Tulis, kirim, langsung tayang di @fess_unair.",
+      "Menfess anonim buat warga UNERR. Tulis, kirim, langsung tayang di @fess_uner.",
     url: SITE_URL,
-    siteName: "Fess UNAIR",
+    siteName: "Fess UNERR",
     type: "website",
     locale: "id_ID",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fess UNAIR",
-    description: "Menfess anonim buat warga UNAIR — tayang di @fess_unair.",
+    title: "Fess UNERR",
+    description: "Menfess anonim buat warga UNERR — tayang di @fess_uner.",
   },
   alternates: {
     types: {

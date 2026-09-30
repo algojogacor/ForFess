@@ -47,7 +47,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* == Identitas Fess UNAIR: kertas krem × tinta × kuning signal ==
+  /* == Identitas Fess UNERR: kertas krem × tinta × kuning signal ==
      Warna brand merujuk CSS variabel sehingga mode gelap cukup
      menukar nilai variabelnya (lihat blok .dark di bawah). */
   --color-paper: var(--paper);

@@ -15,7 +15,7 @@ import {
   Check,
   Copy,
 } from "lucide-react";
-import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL, DEFAULT_CATEGORY } from "@/constants";
+import { MAX_CHARS, MIN_CHARS, IG_PROFILE_URL, IG_HANDLE, DEFAULT_CATEGORY } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Alert } from "@/components/ui/alert";
@@ -309,8 +309,8 @@ export function MenfessForm() {
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({
-          title: "Fess UNAIR",
-          text: `Menfessku udah tayang di @fess_unair (Tiket: NO.${success?.ticketCode ?? ""}) ✳️`,
+          title: "Fess UNERR",
+          text: `Menfessku udah tayang di ${IG_HANDLE} (Tiket: NO.${success?.ticketCode ?? ""}) ✳️`,
           url,
         });
         setShareState("shared");
@@ -334,7 +334,7 @@ export function MenfessForm() {
             <PartyPopper className="size-8 text-ink-fixed" aria-hidden />
           </span>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Terkirim! Menfess kamu meluncur ke @fess_unair
+            Terkirim! Menfess kamu meluncur ke {IG_HANDLE}
           </h2>
           <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
             Teks kamu sudah dijadikan kartu rapi dan diposting. Cek feed
@@ -409,7 +409,7 @@ export function MenfessForm() {
                 rel="noopener noreferrer"
                 className={cn(buttonVariants({ variant: "ink", size: "lg" }))}
               >
-                Buka @fess_unair
+                Buka {IG_HANDLE}
                 <ExternalLink className="size-4" aria-hidden />
               </a>
             )}
@@ -571,7 +571,7 @@ export function MenfessForm() {
             {submitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden />
-                Mengirim ke @fess_unair…
+                Mengirim ke {IG_HANDLE}…
               </>
             ) : (
               <>

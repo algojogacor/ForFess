@@ -9,8 +9,8 @@ export const MAX_CHARS = 500;
 export const MIN_CHARS = 2;
 
 /** Akun Instagram tujuan posting. */
-export const IG_HANDLE = "@fess_unair";
-export const IG_PROFILE_URL = "https://instagram.com/fess_unair";
+export const IG_HANDLE = "@fess_uner";
+export const IG_PROFILE_URL = "https://instagram.com/fess_uner";
 
 /** URL publik situs — dipakai untuk watermark gambar & metadata. */
 export const SITE_URL =
@@ -33,7 +33,7 @@ export const TURNSTILE_VERIFY_URL =
 export const CLOUDINARY_FOLDER = "fess-unair";
 
 /** Caption IG: teks menfess + sumber + hashtag. */
-export const IG_CAPTION_TAGS = "#MenfessUnair #UnairHebat #Menfess";
+export const IG_CAPTION_TAGS = "#MenfessUnerr #Unerr #Menfess";
 
 /**
  * Rate limit sederhana (in-memory, per instance server).

@@ -14,6 +14,7 @@ import { useSyncExternalStore } from "react";
 
 import type { ArchiveItem } from "@/types/menfess";
 import { excerptFromCaption } from "@/lib/caption";
+import { IG_HANDLE } from "@/constants";
 
 /** Satu kartu yang disimpan — snapshot data publik + waktu simpan. */
 export interface SavedFess {
@@ -172,7 +173,7 @@ export function buildKoleksiText(list: SavedFess[], siteHost: string): string {
   if (list.length === 0) return "";
 
   const lines: string[] = [];
-  lines.push(`Koleksi Fess UNAIR — ${list.length} kartu`);
+  lines.push(`Koleksi Fess UNERR — ${list.length} kartu`);
   lines.push(`(dikumpulkan sendiri dari ${siteHost}, tersimpan di perangkat ini)`);
   lines.push("");
 
@@ -187,7 +188,7 @@ export function buildKoleksiText(list: SavedFess[], siteHost: string): string {
   });
 
   lines.push("—");
-  lines.push("Menfess anonim tayang di @fess_unair (Instagram) · koleksi ini privat di perangkatmu.");
+  lines.push(`Menfess anonim tayang di ${IG_HANDLE} (Instagram) · koleksi ini privat di perangkatmu.`);
   return lines.join("\n");
 }
 
