@@ -63,7 +63,7 @@ export async function publishMenfessCarousel(
     };
   }
 
-  const tempCleanups: Array<{ publicId: string; type: "image" | "video" }> = [];
+  const generatedCardCleanups: Array<{ publicId: string; type: "image" | "video" }> = [];
   const childIds: string[] = [];
 
   try {
@@ -82,14 +82,13 @@ export async function publishMenfessCarousel(
       });
 
       const coverUpload = await uploadImage(coverPng);
-      tempCleanups.push({ publicId: coverUpload.publicId, type: "image" });
+      generatedCardCleanups.push({ publicId: coverUpload.publicId, type: "image" });
 
       const coverChildId = await createCarouselItem(coverUpload.url);
       childIds.push(coverChildId);
 
       // ---- 2. SLIDE 2..N: MEDIA ASLI (FOTO / VIDEO) ----
       for (const item of mediaItems) {
-        tempCleanups.push({ publicId: item.publicId, type: item.type });
         if (item.type === "video") {
           const videoChildId = await createCarouselVideoItem(item.url);
           childIds.push(videoChildId);
@@ -107,7 +106,7 @@ export async function publishMenfessCarousel(
           theme,
         });
         const storyUpload = await uploadImage(storyPng);
-        tempCleanups.push({ publicId: storyUpload.publicId, type: "image" });
+        generatedCardCleanups.push({ publicId: storyUpload.publicId, type: "image" });
 
         const storyChildId = await createCarouselItem(storyUpload.url);
         childIds.push(storyChildId);
@@ -120,7 +119,7 @@ export async function publishMenfessCarousel(
         theme,
       });
       const upload = await uploadImage(png);
-      tempCleanups.push({ publicId: upload.publicId, type: "image" });
+      generatedCardCleanups.push({ publicId: upload.publicId, type: "image" });
 
       const textChildId = await createCarouselItem(upload.url);
       childIds.push(textChildId);
@@ -149,6 +148,15 @@ export async function publishMenfessCarousel(
     const mediaId = await publishMedia(carouselCreationId);
     const permalink = await getPermalink(mediaId);
 
+    // ---- PEMBERSIHAN FILE ASLI USER DARI CLOUDINARY ----
+    // HANYA dipanggil setelah postingan 100% SUKSES terbit di Instagram!
+    // Jika belum terbit (masuk antrean / gagal coba ulang), file tetap utuh di Cloudinary.
+    if (hasMedia && mediaItems) {
+      Promise.allSettled(
+        mediaItems.map((item) => deleteMedia(item.publicId, item.type))
+      ).catch(() => {});
+    }
+
     return { mediaId, permalink };
   } catch (err) {
     const ig = err instanceof InstagramError ? err : null;
@@ -158,10 +166,10 @@ export async function publishMenfessCarousel(
     );
     throw err;
   } finally {
-    // ---- PEMBERSIHAN OTOMATIS: HAPUS SEMUA FILE SEMENTARA DARI CLOUDINARY ----
-    // Sesuai prinsip transient buffer, storage Cloudinary selalu dijaga 0 MB.
+    // Kartu yang di-generate server (Cover PNG & Text PNG) selalu dibersihkan
+    // karena bisa di-render ulang kapan saja jika butuh coba lagi.
     Promise.allSettled(
-      tempCleanups.map((c) => deleteMedia(c.publicId, c.type))
+      generatedCardCleanups.map((c) => deleteMedia(c.publicId, c.type))
     ).catch(() => {});
   }
 }

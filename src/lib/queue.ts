@@ -235,11 +235,29 @@ export async function retryQueueItem(id: string): Promise<MenfessQueue> {
 
 /**
  * Menghapus entri antrean dari database (untuk kebutuhan admin).
+ * Sekaligus membersihkan media terkait di Cloudinary jika ada.
  */
 export async function deleteQueueItem(id: string): Promise<MenfessQueue> {
-  return db.menfessQueue.delete({
+  const item = await db.menfessQueue.delete({
     where: { id },
   });
+
+  if (item.mediaItems) {
+    try {
+      const parsed = JSON.parse(item.mediaItems) as Array<{
+        publicId: string;
+        type: "image" | "video";
+      }>;
+      const { deleteMedia } = await import("@/lib/cloudinary");
+      Promise.allSettled(
+        parsed.map((p) => deleteMedia(p.publicId, p.type))
+      ).catch(() => {});
+    } catch {
+      // abaikan error parsing
+    }
+  }
+
+  return item;
 }
 
 /**
