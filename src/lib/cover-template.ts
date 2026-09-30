@@ -271,7 +271,6 @@ export function buildCoverTemplateNode(
               width: "100%",
               padding: "40px",
               position: "relative",
-              zIndex: 2,
             },
             children: [
               {
@@ -326,7 +325,6 @@ export function buildCoverTemplateNode(
               width: "100%",
               padding: "60px 48px 48px 48px",
               position: "relative",
-              zIndex: 2,
               backgroundImage:
                 "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0) 100%)",
             },
