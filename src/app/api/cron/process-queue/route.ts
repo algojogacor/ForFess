@@ -1,18 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { IG_QUOTA_BUFFER, SITE_URL } from "@/constants";
 import { isDryRun } from "@/lib/config";
-import { renderMenfessCard } from "@/lib/generate-image";
-import { uploadImage, deleteImage, ensureStaticSlide2Url } from "@/lib/cloudinary";
-import {
-  checkLimit,
-  createCarouselItem,
-  createCarouselContainer,
-  waitForContainer,
-  publishMedia,
-  getPermalink,
-} from "@/lib/instagram";
+import { checkLimit } from "@/lib/instagram";
 import { isPostTheme } from "@/lib/post-template";
-import { buildMenfessCaption } from "@/lib/caption";
+import { publishMenfessCarousel } from "@/lib/publish-carousel";
 import {
   getPendingQueueBatch,
   markQueueProcessing,
@@ -125,66 +116,32 @@ async function handleProcessQueue(request: NextRequest) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      let publicId: string | null = null;
       try {
         await markQueueProcessing(item.id);
 
         const theme = isPostTheme(item.theme) ? item.theme : "klasik";
-        const png = await renderMenfessCard(item.content, {
-          categoryId: item.category,
+        const coverImage = item.coverImage ? JSON.parse(item.coverImage) : null;
+        const mediaItems = item.mediaItems ? JSON.parse(item.mediaItems) : null;
+
+        const result = await publishMenfessCarousel({
           ticketCode: item.ticketCode,
+          category: item.category,
           theme,
+          content: item.content,
+          coverTitle: item.coverTitle,
+          coverStyle: (item.coverStyle as any) ?? "brutalist",
+          aspectRatio: (item.aspectRatio as any) ?? "4:5",
+          coverImage,
+          mediaItems,
+          dryRun: isDryRun(),
         });
 
-        if (isDryRun()) {
-          await markQueuePublished(item.id, {
-            permalink: "https://instagram.com/dry-run",
-            mediaId: "dry_run",
-          });
-          successCount++;
-        } else {
-          const uploadRes = await uploadImage(png);
-          publicId = uploadRes.publicId;
-          const imageUrl = uploadRes.url;
-
-          const slide2Url = await ensureStaticSlide2Url();
-
-          const [slide1ChildId, slide2ChildId] = await Promise.all([
-            createCarouselItem(imageUrl),
-            createCarouselItem(slide2Url),
-          ]);
-
-          await Promise.all([
-            waitForContainer(slide1ChildId),
-            waitForContainer(slide2ChildId),
-          ]);
-
-          const caption = buildMenfessCaption(item.content, {
-            category: item.category,
-            ticketCode: item.ticketCode,
-            siteUrl: SITE_URL,
-          });
-
-          const carouselContainerId = await createCarouselContainer(
-            [slide1ChildId, slide2ChildId],
-            caption
-          );
-
-          await waitForContainer(carouselContainerId);
-
-          const mediaId = await publishMedia(carouselContainerId);
-          const permalink = await getPermalink(mediaId);
-
-          await deleteImage(publicId).catch(() => {});
-          publicId = null;
-
-          await markQueuePublished(item.id, { permalink, mediaId });
-          successCount++;
-        }
+        await markQueuePublished(item.id, {
+          permalink: result.permalink,
+          mediaId: result.mediaId,
+        });
+        successCount++;
       } catch (err) {
-        if (publicId) {
-          await deleteImage(publicId).catch(() => {});
-        }
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error(
           `[process-queue] Gagal memproses antrean ${item.id} (NO.${item.ticketCode}):`,

@@ -13,6 +13,7 @@ export type SubmitErrorCode =
   | "UPLOAD_FAILED"
   | "IG_MEDIA_FAILED"
   | "IG_PUBLISH_FAILED"
+  | "MODERATION_HOLD"
   | "INTERNAL_ERROR";
 
 export interface SubmitError {
@@ -38,16 +39,35 @@ export interface SubmitSuccess {
   queued?: boolean;
   /** Posisi antrean jika masuk antrean. */
   queuePosition?: number;
+  /** True jika kiriman ditahan untuk peninjauan moderasi admin. */
+  moderationHold?: boolean;
   /** Pesan konfirmasi / status untuk user. */
   message?: string;
 }
 
 export type SubmitResponse = SubmitSuccess | SubmitError;
 
+/** Item media yang diunggah pengguna (foto atau video). */
+export interface UploadedMediaItem {
+  url: string;
+  publicId: string;
+  type: "image" | "video";
+}
+
 /** Body POST /api/submit. */
 export interface SubmitRequestBody {
-  /** Isi menfess dari user. */
-  content: string;
+  /** Isi cerita menfess dari user (opsional jika ada media + coverTitle). */
+  content?: string;
+  /** Judul cover (wajib jika ada mediaItems). */
+  coverTitle?: string;
+  /** Pilihan gaya visual cover: "brutalist" | "glass". */
+  coverStyle?: "brutalist" | "glass";
+  /** Pilihan rasio carousel Instagram: "4:5" | "1:1". */
+  aspectRatio?: "4:5" | "1:1";
+  /** URL foto khusus untuk cover (opsional, terutama jika media pertama adalah video). */
+  coverImage?: { url: string; publicId: string };
+  /** Daftar media foto/video asli yang diunggah (1–6 item). */
+  mediaItems?: UploadedMediaItem[];
   /** Token dari widget Turnstile (opsional jika Turnstile dinonaktifkan). */
   turnstileToken?: string;
   /** Honeypot anti-bot — harus kosong; kalau terisi, request dibuang diam-diam. */

@@ -133,3 +133,33 @@ export async function renderSlide2Card(theme?: PostTheme): Promise<Buffer> {
   return buffer;
 }
 
+/**
+ * Render Cover Card (Slide 1 Postingan Media) menjadi PNG tajam 1080px.
+ * Mendukung rasio 4:5 (1080x1350) dan 1:1 (1080x1080).
+ */
+export async function renderCoverCard(
+  options: import("@/lib/cover-template").BuildCoverTemplateOptions
+): Promise<Buffer> {
+  const { buildCoverTemplateNode } = await import("@/lib/cover-template");
+  const node = buildCoverTemplateNode(options);
+  const width = 1080;
+  const height = options.aspectRatio === "4:5" ? 1350 : 1080;
+
+  const svg = await satori(node as never, {
+    width,
+    height,
+    fonts: SATORI_FONTS as any,
+    loadAdditionalAsset: async (code: string, segment: string) => {
+      if (code === "emoji") {
+        return (await loadEmoji(segment)) ?? "";
+      }
+      return await loadDynamicFont(code, segment);
+    },
+  });
+
+  return sharp(Buffer.from(svg))
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+
