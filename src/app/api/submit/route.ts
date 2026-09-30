@@ -88,14 +88,19 @@ export async function POST(request: Request) {
 
   // ---- 3. Rate limit per IP ----
   const ip = getClientIp(request.headers);
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(ip);
   if (!rl.allowed) {
-    const wait = rl.retryAfter ?? 30;
+    const waitSec = rl.retryAfter ?? 300;
+    const waitMin = Math.ceil(waitSec / 60);
+    const waitText =
+      waitSec < 90
+        ? `${waitSec} detik lagi`
+        : `sekitar ${waitMin} menit lagi`;
     return fail(
       "RATE_LIMITED",
-      `Sabar dulu ya — kamu baru saja kirim. Coba lagi dalam ${wait} detik.`,
+      `Hai, sepertinya kamu baru saja mengirim menfess. Tenang dulu sebentar — kamu bisa kirim lagi dalam ${waitText}. Tidak kemana-mana kok! 😊`,
       429,
-      wait
+      waitSec
     );
   }
 

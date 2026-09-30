@@ -15,6 +15,16 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+/// Catatan rate limit kiriman menfess per pengirim anonim.
+/// IP disimpan sebagai hash SHA-256 — IP asli TIDAK pernah ditulis ke database.
+/// Baris otomatis kadaluarsa setelah 10 menit dan dibersihkan periodik.
+model SubmitRateLimit {
+  ipHash     String   @id
+  submittedAt DateTime @default(now())
+
+  @@index([submittedAt])
+}
+
 /// Satu reaksi pembaca pada satu kartu menfess.
 /// Baris dibuat anonim: yang disimpan cuma ID media IG-nya, jenis reaksi,
 /// dan waktu. Anti-spam dilakukan rate-limit in-memory per IP — IP-nya

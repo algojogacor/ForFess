@@ -41,12 +41,12 @@ export const IG_CAPTION_TAGS = "#MenfessUnerr #Unerr #Menfess";
  * pertama — Turnstile menangani bot di lapisan kedua.
  */
 export const RATE_LIMIT = {
-  /** Jeda minimum antar submit dari IP yang sama (detik). */
-  COOLDOWN_SECONDS: 20,
-  /** Maksimum submit per IP dalam window. */
-  MAX_PER_WINDOW: 3,
-  /** Window rate limit (milidetik) — 15 menit. */
-  WINDOW_MS: 15 * 60 * 1000,
+  /** Jeda minimum antar submit dari IP yang sama — 5 menit. */
+  COOLDOWN_SECONDS: 300,
+  /** Maksimum submit per IP dalam window (1 per 5 menit). */
+  MAX_PER_WINDOW: 1,
+  /** Window rate limit (milidetik) — 5 menit. */
+  WINDOW_MS: 5 * 60 * 1000,
 } as const;
 
 /** Buffer kuota IG: berhenti menerima submit jika sisa kuota <= nilai ini. */

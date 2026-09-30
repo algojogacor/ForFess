@@ -1,14 +1,20 @@
 /**
- * Rate limit in-memory sederhana (sliding window + cooldown per IP).
+ * Rate limit berbasis database (Neon PostgreSQL) — persisten lintas serverless instances.
  *
- * Catatan skalabilitas: di Vercel serverless state ini per-instance.
- * Itu disengaja — lapisan anti-spam utama tetap Turnstile. Kalau nanti
- * butuh limit global, ganti implementasi fungsi ini ke Upstash/Redis
- * tanpa mengubah pemanggil.
+ * Prinsip privasi: IP tidak pernah disimpan mentah. Sebelum masuk DB,
+ * IP di-hash SHA-256 sehingga tidak bisa di-reverse. Identitas pengirim
+ * tetap anonim sepenuhnya.
+ *
+ * Window: 5 menit. Pengirim yang mencoba lebih cepat mendapat pesan
+ * manusiawi, bukan pesan error keras.
+ *
+ * Reaksi emoji tetap in-memory (frekuensi tinggi, tidak butuh persistensi).
  */
+import crypto from "crypto";
+import { db } from "@/lib/db";
 import { RATE_LIMIT, REACTION_RATE_LIMIT } from "@/constants";
 
-const hits = new Map<string, number[]>();
+// ---- Reaksi tetap in-memory (frekuensi tinggi, tidak perlu persisten) ----
 const reactionHits = new Map<string, number[]>();
 
 export interface RateLimitResult {
@@ -17,8 +23,61 @@ export interface RateLimitResult {
   retryAfter?: number;
 }
 
-/** Factory: sliding-window limiter dengan cooldown per kunci + peta tersendiri. */
-function createLimiter(config: {
+/** Hash IP ke SHA-256 hex — tidak bisa di-reverse. */
+function hashIp(ip: string): string {
+  return crypto.createHash("sha256").update(`fess-rl:${ip}`).digest("hex");
+}
+
+/**
+ * Cek rate limit submit berbasis DB.
+ * Window 5 menit — satu kiriman per window per pengirim.
+ * Fail-open: kalau DB tidak bisa diakses, izinkan request (jangan blokir user).
+ */
+export async function checkRateLimit(ip: string): Promise<RateLimitResult> {
+  const ipHash = hashIp(ip);
+  const windowMs = RATE_LIMIT.WINDOW_MS;
+  const windowStart = new Date(Date.now() - windowMs);
+
+  try {
+    // Cek apakah ada kiriman dalam window aktif
+    const existing = await db.submitRateLimit.findUnique({
+      where: { ipHash },
+    });
+
+    if (existing && existing.submittedAt > windowStart) {
+      const retryAfter = Math.ceil(
+        (existing.submittedAt.getTime() + windowMs - Date.now()) / 1000
+      );
+      return { allowed: false, retryAfter: Math.max(1, retryAfter) };
+    }
+
+    // Upsert: catat waktu kirim terbaru
+    await db.submitRateLimit.upsert({
+      where: { ipHash },
+      update: { submittedAt: new Date() },
+      create: { ipHash, submittedAt: new Date() },
+    });
+
+    // Bersihkan baris yang sudah melewati dua kali window (fire-and-forget)
+    db.submitRateLimit
+      .deleteMany({
+        where: { submittedAt: { lt: new Date(Date.now() - windowMs * 2) } },
+      })
+      .catch(() => {/* abaikan — cleanup adalah bonus */});
+
+    return { allowed: true };
+  } catch (err) {
+    // Fail-open: kalau DB bermasalah, jangan blokir pengirim
+    console.warn(
+      "[rate-limit] DB check gagal, izinkan request:",
+      err instanceof Error ? err.message : err
+    );
+    return { allowed: true };
+  }
+}
+
+// ---- Reaksi: tetap in-memory ----
+function createInMemoryLimiter(config: {
   WINDOW_MS: number;
   COOLDOWN_SECONDS: number;
   MAX_PER_WINDOW: number;
@@ -27,7 +86,6 @@ function createLimiter(config: {
     const now = Date.now();
     const windowStart = now - config.WINDOW_MS;
 
-    // Rapikan entri lama & bersih-bersih berkala agar memory tidak bengkak.
     if (map.size > 5_000) {
       for (const [k, list] of map) {
         const fresh = list.filter((t) => t > windowStart);
@@ -37,8 +95,6 @@ function createLimiter(config: {
     }
 
     const list = (map.get(key) ?? []).filter((t) => t > windowStart);
-
-    // 1) Cooldown antar aksi dari kunci yang sama.
     const last = list[list.length - 1];
     if (last) {
       const elapsedSec = (now - last) / 1000;
@@ -49,29 +105,21 @@ function createLimiter(config: {
         };
       }
     }
-
-    // 2) Batas jumlah aksi per window.
     if (list.length >= config.MAX_PER_WINDOW) {
       return {
         allowed: false,
         retryAfter: Math.ceil((list[0] + config.WINDOW_MS - now) / 1000),
       };
     }
-
     list.push(now);
     map.set(key, list);
     return { allowed: true };
   };
 }
 
-const submitLimiter = createLimiter(RATE_LIMIT);
-const reactionLimiter = createLimiter(REACTION_RATE_LIMIT);
+const reactionLimiter = createInMemoryLimiter(REACTION_RATE_LIMIT);
 
-export function checkRateLimit(ip: string): RateLimitResult {
-  return submitLimiter(hits, ip);
-}
-
-/** Rate limit untuk klik reaksi — peta & angka terpisah dari submit. */
+/** Rate limit untuk klik reaksi — tetap in-memory (frekuensi tinggi). */
 export function checkReactionRateLimit(ip: string): RateLimitResult {
   return reactionLimiter(reactionHits, ip);
 }
@@ -86,22 +134,18 @@ export function checkReactionRateLimit(ip: string): RateLimitResult {
  * 5. Jika tidak ditemukan atau kosong, kembalikan "unknown".
  */
 export function getClientIp(headers: Headers): string {
-  // 1. Header edge tepercaya dari Vercel (ambil elemen pertama jika multi-hop)
   const vercelFwd = headers.get("x-vercel-forwarded-for");
   if (vercelFwd) {
     const ip = vercelFwd.split(",")[0]?.trim();
     if (ip) return ip;
   }
 
-  // 2. Cek x-real-ip dari reverse proxy
   const realIp = headers.get("x-real-ip")?.trim();
   if (realIp) return realIp;
 
-  // 3. Cek cf-connecting-ip jika menggunakan Cloudflare
   const cfIp = headers.get("cf-connecting-ip")?.trim();
   if (cfIp) return cfIp;
 
-  // 4. Fallback ke x-forwarded-for: hindari index 0 karena bisa dipalsukan attacker via header request
   const fwd = headers.get("x-forwarded-for");
   if (fwd) {
     const ips = fwd.split(",").map((s) => s.trim()).filter(Boolean);
@@ -110,4 +154,3 @@ export function getClientIp(headers: Headers): string {
 
   return "unknown";
 }
-
