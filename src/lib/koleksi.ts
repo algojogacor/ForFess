@@ -24,7 +24,8 @@ export interface SavedFess {
   item: ArchiveItem;
 }
 
-const STORAGE_KEY = "fess-unair:koleksi:v1";
+const STORAGE_KEY = "fess-unerr:koleksi:v1";
+const LEGACY_STORAGE_KEY = "fess-unair:koleksi:v1";
 /** Batas jumlah kartu tersimpan — kalau lebih, yang terlama dibuang (FIFO). */
 export const KOLEKSI_MAX = 100;
 
@@ -33,7 +34,7 @@ export const KOLEKSI_MAX = 100;
  * sama). Antar-tab sinkronnya lewat event `storage` bawaan browser —
  * keduanya didengarkan hook useKoleksi.
  */
-export const KOLEKSI_CHANGED_EVENT = "fess-unair:koleksi-changed";
+export const KOLEKSI_CHANGED_EVENT = "fess-unerr:koleksi-changed";
 
 /* ------------------------------------------------------------------ */
 /* Cache snapshot stabil untuk useSyncExternalStore                    */
@@ -45,7 +46,9 @@ let cachedList: SavedFess[] | null = null;
 function readRaw(): SavedFess[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SavedFess[];
     if (!Array.isArray(parsed)) return [];
@@ -158,6 +161,7 @@ export function clearKoleksi(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     /* abaikan */
   }

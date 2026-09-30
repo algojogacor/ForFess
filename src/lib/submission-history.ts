@@ -27,7 +27,8 @@ export interface SubmissionRecord {
   at: number;
 }
 
-const STORAGE_KEY = "fess-unair:submissions:v1";
+const STORAGE_KEY = "fess-unerr:submissions:v1";
+const LEGACY_STORAGE_KEY = "fess-unair:submissions:v1";
 /** Batas jumlah riwayat yang disimpan — cukup untuk sesi perangkat ini. */
 const MAX_RECORDS = 10;
 
@@ -36,7 +37,7 @@ const MAX_RECORDS = 10;
  * Komponen riwayat mendengarkan event ini supaya daftarnya langsung
  * menyegarkan tanpa perlu reload halaman.
  */
-export const SUBMISSION_SAVED_EVENT = "fess-unair:submission-saved";
+export const SUBMISSION_SAVED_EVENT = "fess-unerr:submission-saved";
 
 function makeId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -52,7 +53,9 @@ function makeId(): string {
 export function listSubmissions(): SubmissionRecord[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SubmissionRecord[];
     if (!Array.isArray(parsed)) return [];
@@ -113,6 +116,7 @@ export function clearSubmissions(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     /* abaikan */
   }

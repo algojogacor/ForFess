@@ -1,6 +1,6 @@
-# Worklog — Fess UNAIR
+# Worklog — Fess UNERR
 
-Platform menfess anonim untuk civitas akademika Universitas Airlangga.
+Platform menfess anonim untuk civitas akademika UNERR.
 Post anonim → generate gambar (Satori 1080×1080) → upload Cloudinary → post Instagram Graph API → delete gambar.
 
 ---

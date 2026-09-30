@@ -48,11 +48,12 @@ interface DraftPayload {
 }
 
 /** Key localStorage untuk draf menfess — tersimpan di perangkat, bukan server. */
-const DRAFT_KEY = "fess-unair:menfess-draft:v3";
+const DRAFT_KEY = "fess-unerr:menfess-draft:v3";
+const DRAFT_KEY_LEGACY = "fess-unair:menfess-draft:v3";
 /** Draf versi v2 (dengan kategori tanpa tema). */
-const DRAFT_KEY_V2 = "fess-unair:menfess-draft:v2";
+const DRAFT_KEY_V2 = "fess-unerr:menfess-draft:v2";
 /** Draf versi v1 (teks polos). */
-const DRAFT_KEY_V1 = "fess-unair:menfess-draft:v1";
+const DRAFT_KEY_V1 = "fess-unerr:menfess-draft:v1";
 
 /**
  * Form kirim menfess: textarea + captcha Turnstile + picker kategori +
@@ -101,7 +102,7 @@ export function MenfessForm() {
     const timer = setTimeout(() => {
       try {
         // Cek v3 dulu (JSON { content, category, theme })
-        const savedV3 = window.localStorage.getItem(DRAFT_KEY);
+        const savedV3 = window.localStorage.getItem(DRAFT_KEY) ?? window.localStorage.getItem(DRAFT_KEY_LEGACY);
         if (savedV3) {
           const parsed = JSON.parse(savedV3) as Partial<DraftPayload>;
           if (parsed.content && parsed.content.trim().length >= MIN_CHARS) {
@@ -175,6 +176,7 @@ export function MenfessForm() {
   const discardDraft = () => {
     try {
       window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(DRAFT_KEY_LEGACY);
       window.localStorage.removeItem(DRAFT_KEY_V2);
       window.localStorage.removeItem(DRAFT_KEY_V1);
     } catch {
@@ -220,6 +222,7 @@ export function MenfessForm() {
           // Sukses → draf tidak diperlukan lagi.
           try {
             window.localStorage.removeItem(DRAFT_KEY);
+            window.localStorage.removeItem(DRAFT_KEY_LEGACY);
             window.localStorage.removeItem(DRAFT_KEY_V2);
             window.localStorage.removeItem(DRAFT_KEY_V1);
           } catch {
