@@ -1,6 +1,6 @@
 /**
  * Kartu acak — pilih SATU post sembarang dari daftar post terakhir
- * @fess_uner. Dipakai halaman /acak ("kocok kartu").
+ * @fess_unerr. Dipakai halaman /acak ("kocok kartu").
  *
  * Catatan desain:
  * - Acaknya dari pool cache bersama (lib/media-pool), jadi nggak nambah

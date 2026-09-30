@@ -576,7 +576,7 @@ export interface BuildSlide2Options {
  * Bangun struktur kartu slide ke-2 (statis QR + CTA) 1080x1080 untuk Satori.
  * Menghasilkan kartu carousel dengan nuansa visual identik:
  * latar kertas krem, tipografi Fraunces serif, monospace Space Mono,
- * aksen hijau tua (#1B4332), dan QR code fess-unair.vercel.app.
+ * aksen hijau tua (#1B4332), dan QR code fess-unerr.vercel.app.
  */
 export function buildSlide2TemplateNode(
   options: BuildSlide2Options,
@@ -790,7 +790,7 @@ export function buildSlide2TemplateNode(
                     textAlign: "center",
                     marginTop: "12px",
                   },
-                  children: "fess-unair.vercel.app",
+                  children: SITE_URL_SHORT,
                 },
               },
             ],

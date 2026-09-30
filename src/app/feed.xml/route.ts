@@ -1,6 +1,6 @@
 /**
  * RSS feed — /feed.xml
- * Daftar menfess terbaru dari @fess_uner dalam format RSS 2.0, dengan
+ * Daftar menfess terbaru dari @fess_unerr dalam format RSS 2.0, dengan
  * link ke halaman kartu lokal (/fess/[id]) bukan langsung ke IG — biar
  * pembaca feed dapat halaman yang cepat & rapi.
  *

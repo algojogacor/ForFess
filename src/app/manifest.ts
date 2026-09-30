@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Fess UNERR — menfess anonim buat warga UNERR",
     short_name: "Fess UNERR",
     description:
-      "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_uner.",
+      "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_unerr.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -5,7 +5,7 @@ import { SubmissionHistory } from "@/components/menfess/SubmissionHistory";
 export const metadata: Metadata = {
   title: "Kirim menfess",
   description:
-    "Form pengiriman menfess anonim Fess UNERR — tulis, verifikasi singkat, langsung tayang di @fess_uner.",
+    "Form pengiriman menfess anonim Fess UNERR — tulis, verifikasi singkat, langsung tayang di @fess_unerr.",
 };
 
 export default function KirimPage() {

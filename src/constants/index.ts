@@ -9,12 +9,12 @@ export const MAX_CHARS = 500;
 export const MIN_CHARS = 2;
 
 /** Akun Instagram tujuan posting. */
-export const IG_HANDLE = "@fess_uner";
-export const IG_PROFILE_URL = "https://instagram.com/fess_uner";
+export const IG_HANDLE = "@fess_unerr";
+export const IG_PROFILE_URL = "https://instagram.com/fess_unerr";
 
 /** URL publik situs — dipakai untuk watermark gambar & metadata. */
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://fess-unair.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://fess-unerr.vercel.app";
 /** Host tanpa protokol, untuk tampilan singkat (watermark dsb). */
 export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 export const SITE_URL_SHORT = SITE_HOST;
@@ -30,7 +30,7 @@ export const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /** Folder upload Cloudinary untuk gambar menfess sementara. */
-export const CLOUDINARY_FOLDER = "fess-unair";
+export const CLOUDINARY_FOLDER = "fess-unerr";
 
 /** Caption IG: teks menfess + sumber + hashtag. */
 export const IG_CAPTION_TAGS = "#MenfessUnerr #Unerr #Menfess";

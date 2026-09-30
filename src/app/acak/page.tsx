@@ -1,6 +1,6 @@
 /**
  * Halaman /acak — "kocok kartu".
- * Satu tombol, satu kartu sembarang dari arsip @fess_uner.
+ * Satu tombol, satu kartu sembarang dari arsip @fess_unerr.
  * Bagi yang nggak mau nyari-nyari: tekan kocok, baca, ulangi.
  *
  * Halaman ini sengaja noindex (isinya berubah tiap request); kartu

@@ -45,12 +45,12 @@ export const metadata: Metadata = {
     template: "%s — Fess UNERR",
   },
   description:
-    "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_uner.",
+    "Tulis apa pun yang belum sempat kamu ucapkan. Tanpa nama, tanpa login — langsung tayang di @fess_unerr.",
   keywords: ["menfess", "unerr", "fess unerr", "anonim", "mahasiswa"],
   openGraph: {
     title: "Fess UNERR",
     description:
-      "Menfess anonim buat warga UNERR. Tulis, kirim, langsung tayang di @fess_uner.",
+      "Menfess anonim buat warga UNERR. Tulis, kirim, langsung tayang di @fess_unerr.",
     url: SITE_URL,
     siteName: "Fess UNERR",
     type: "website",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Fess UNERR",
-    description: "Menfess anonim buat warga UNERR — tayang di @fess_uner.",
+    description: "Menfess anonim buat warga UNERR — tayang di @fess_unerr.",
   },
   alternates: {
     types: {
