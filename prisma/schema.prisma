@@ -58,6 +58,7 @@ enum QueueStatus {
   PROCESSING
   PUBLISHED
   FAILED
+  WAITING_APPROVAL
 }
 
 /// Antrean posting otomatis menfess ketika kuota Instagram harian habis.
@@ -65,6 +66,11 @@ model MenfessQueue {
   id           String      @id @default(cuid())
   ticketCode   String      @unique
   content      String      @db.Text
+  coverTitle   String?     @db.Text
+  coverStyle   String?     @default("brutalist")
+  aspectRatio  String?     @default("4:5")
+  coverImage   String?     @db.Text
+  mediaItems   String?     @db.Text
   category     String      @default("random")
   theme        String      @default("klasik")
   status       QueueStatus @default(PENDING)

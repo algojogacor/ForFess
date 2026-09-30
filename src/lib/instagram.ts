@@ -146,11 +146,30 @@ export async function createMediaContainer(imageUrl: string, caption: string): P
   return data.id;
 }
 
-/** Buat child item container untuk postingan Carousel Instagram. Mengembalikan creation_id item. */
+/** Buat child item container untuk postingan Carousel Instagram (Gambar). Mengembalikan creation_id item. */
 export async function createCarouselItem(imageUrl: string): Promise<string> {
   const { userId, accessToken } = getConfig();
   const body = new URLSearchParams({
     image_url: imageUrl,
+    is_carousel_item: "true",
+    access_token: accessToken,
+  });
+
+  const data = await graphFetch<{ id: string }>(`${userId}/media`, {
+    method: "POST",
+    body: body.toString(),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+
+  return data.id;
+}
+
+/** Buat child item container untuk postingan Carousel Instagram (Video). Mengembalikan creation_id item. */
+export async function createCarouselVideoItem(videoUrl: string): Promise<string> {
+  const { userId, accessToken } = getConfig();
+  const body = new URLSearchParams({
+    media_type: "VIDEO",
+    video_url: videoUrl,
     is_carousel_item: "true",
     access_token: accessToken,
   });

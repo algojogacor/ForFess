@@ -41,20 +41,60 @@ export async function uploadImage(
   };
 }
 
-/** Hapus gambar dari Cloudinary berdasarkan public_id. Tidak melempar error — cleanup harus diam. */
-export async function deleteImage(publicId: string): Promise<void> {
+/** Hapus gambar atau video dari Cloudinary berdasarkan public_id. */
+export async function deleteMedia(
+  publicId: string,
+  resourceType: "image" | "video" = "image"
+): Promise<void> {
   try {
     await cloudinary.uploader.destroy(publicId, {
-      resource_type: "image",
+      resource_type: resourceType,
       invalidate: true,
     });
   } catch (err) {
-    // Gagal delete tidak boleh bikin submission user dianggap gagal.
     console.error(
-      `[cloudinary] gagal delete public_id=${publicId}:`,
+      `[cloudinary] gagal delete public_id=${publicId} (${resourceType}):`,
       err instanceof Error ? err.message : err
     );
   }
+}
+
+/** Hapus gambar dari Cloudinary berdasarkan public_id. Tidak melempar error — cleanup harus diam. */
+export async function deleteImage(publicId: string): Promise<void> {
+  return deleteMedia(publicId, "image");
+}
+
+/**
+ * Buat signature aman untuk direct upload dari browser klien ke Cloudinary.
+ * Bypasses limit Vercel 4.5MB tanpa mengekspos apiSecret.
+ */
+export function generateUploadSignature(
+  resourceType: "image" | "video" = "image"
+) {
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const folder = `${CLOUDINARY_FOLDER}/user_media`;
+  const tags = `${CLOUDINARY_FOLDER},temp`;
+
+  const paramsToSign: Record<string, string | number> = {
+    folder,
+    tags,
+    timestamp,
+  };
+
+  const signature = cloudinary.utils.api_sign_request(
+    paramsToSign,
+    cfg.apiSecret
+  );
+
+  return {
+    signature,
+    timestamp,
+    folder,
+    tags,
+    apiKey: cfg.apiKey,
+    cloudName: cfg.cloudName,
+    resourceType,
+  };
 }
 
 let cachedSlide2Url: string | null = null;

@@ -48,18 +48,26 @@ export function buildMenfessCaption(
     category?: string;
     ticketCode?: string;
     siteUrl?: string;
+    coverTitle?: string;
   }
 ): string {
   const category = options?.category ?? DEFAULT_CATEGORY;
   const ticketCode = options?.ticketCode;
   const siteUrl = options?.siteUrl ?? SITE_URL;
+  const coverTitle = options?.coverTitle?.trim();
 
   const categoryLine =
     category !== DEFAULT_CATEGORY ? `kategori: ${category}\n\n` : "";
   const ticketSuffix = ticketCode ? ` · NO.${ticketCode}` : "";
   const attribution = `Terkirim anonim via ${siteUrl}${ticketSuffix}`;
 
-  return `${content}\n\n${categoryLine}${attribution}\n\n${IG_CAPTION_TAGS}`;
+  const mainBody = coverTitle
+    ? content && content.trim().length > 0
+      ? `${coverTitle}\n\n${content}`
+      : coverTitle
+    : content;
+
+  return `${mainBody}\n\n${categoryLine}${attribution}\n\n${IG_CAPTION_TAGS}`;
 }
 
 /**

@@ -8,6 +8,12 @@ export interface EnqueueInput {
   content: string;
   category?: string;
   theme?: string;
+  coverTitle?: string;
+  coverStyle?: string;
+  aspectRatio?: string;
+  coverImage?: { url: string; publicId: string };
+  mediaItems?: Array<{ url: string; publicId: string; type: "image" | "video" }>;
+  status?: QueueStatus;
 }
 
 export interface EnqueueResult {
@@ -21,6 +27,7 @@ export interface QueueStats {
   processing: number;
   published: number;
   failed: number;
+  waitingApproval: number;
   total: number;
 }
 
@@ -33,7 +40,7 @@ export interface PublicQueueItem {
 }
 
 /**
- * Memasukkan menfess baru ke dalam antrean (status PENDING).
+ * Memasukkan menfess baru ke dalam antrean (status PENDING atau WAITING_APPROVAL).
  * Menghitung posisi antrean saat ini (1-based index).
  */
 export async function enqueueMenfess(input: EnqueueInput): Promise<EnqueueResult> {
@@ -43,7 +50,12 @@ export async function enqueueMenfess(input: EnqueueInput): Promise<EnqueueResult
       content: input.content,
       category: input.category ?? "random",
       theme: input.theme ?? "klasik",
-      status: "PENDING",
+      coverTitle: input.coverTitle,
+      coverStyle: input.coverStyle ?? "brutalist",
+      aspectRatio: input.aspectRatio ?? "4:5",
+      coverImage: input.coverImage ? JSON.stringify(input.coverImage) : null,
+      mediaItems: input.mediaItems ? JSON.stringify(input.mediaItems) : null,
+      status: input.status ?? "PENDING",
       scheduledFor: new Date(),
     },
   });
@@ -158,11 +170,12 @@ export async function markQueueFailed(
  * Menghitung ringkasan statistik antrean (pending, processing, published, failed, total).
  */
 export async function getQueueStats(): Promise<QueueStats> {
-  const [pending, processing, published, failed, total] = await Promise.all([
+  const [pending, processing, published, failed, waitingApproval, total] = await Promise.all([
     db.menfessQueue.count({ where: { status: "PENDING" } }),
     db.menfessQueue.count({ where: { status: "PROCESSING" } }),
     db.menfessQueue.count({ where: { status: "PUBLISHED" } }),
     db.menfessQueue.count({ where: { status: "FAILED" } }),
+    db.menfessQueue.count({ where: { status: "WAITING_APPROVAL" } }),
     db.menfessQueue.count(),
   ]);
 
@@ -171,6 +184,7 @@ export async function getQueueStats(): Promise<QueueStats> {
     processing,
     published,
     failed,
+    waitingApproval,
     total,
   };
 }
@@ -223,6 +237,28 @@ export async function retryQueueItem(id: string): Promise<MenfessQueue> {
  * Menghapus entri antrean dari database (untuk kebutuhan admin).
  */
 export async function deleteQueueItem(id: string): Promise<MenfessQueue> {
+  return db.menfessQueue.delete({
+    where: { id },
+  });
+}
+
+/**
+ * Menyetujui item antrean yang ditahan moderasi (mengubah status ke PENDING).
+ */
+export async function approveQueueItem(id: string): Promise<MenfessQueue> {
+  return db.menfessQueue.update({
+    where: { id },
+    data: {
+      status: "PENDING",
+      scheduledFor: new Date(),
+    },
+  });
+}
+
+/**
+ * Menolak item antrean yang melanggar ketentuan (menghapus dari antrean).
+ */
+export async function rejectQueueItem(id: string): Promise<MenfessQueue> {
   return db.menfessQueue.delete({
     where: { id },
   });

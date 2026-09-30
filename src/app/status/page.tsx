@@ -302,6 +302,11 @@ export default async function StatusPage() {
                   <span className="inline-flex items-center gap-1 rounded-md border border-ink/25 bg-paper px-2 py-0.5 font-mono text-[11px] font-bold text-ink-soft">
                     ✓ {queueStats.published} Tayang
                   </span>
+                  {queueStats.waitingApproval > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold text-tomato-deep">
+                      ⚠️ {queueStats.waitingApproval} Butuh Moderasi
+                    </span>
+                  )}
                   {queueStats.failed > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-md border border-tomato-deep/40 bg-tomato/10 px-2 py-0.5 font-mono text-[11px] font-bold text-tomato-deep">
                       ✗ {queueStats.failed} Gagal

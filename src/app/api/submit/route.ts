@@ -1,54 +1,37 @@
-/**
- * Entry point submission menfess.
- * Pipeline: parse body → honeypot → sanitasi & validasi teks → rate limit →
- * captcha → cek kuota IG → generate nomor tiket & gambar → (dry-run? berhenti) →
- * upload Cloudinary → buat container (+ retry code 9004 jika Meta flaky) →
- * publish → ambil permalink → bersihkan gambar sementara.
- *
- * Prinsip: setiap kegagalan menghasilkan pesan SPESIFIK untuk user,
- * bukan "Something went wrong".
- */
 import { NextResponse } from "next/server";
 import {
-  IG_QUOTA_BUFFER,
-  SITE_URL,
-  MENFESS_CATEGORY_IDS,
   DEFAULT_CATEGORY,
+  IG_QUOTA_BUFFER,
+  MENFESS_CATEGORY_IDS,
 } from "@/constants";
-import { isDryRun, isTurnstileEnabled } from "@/lib/config";
+import { isTurnstileEnabled, isDryRun } from "@/lib/config";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { renderMenfessCard } from "@/lib/generate-image";
-import { uploadImage, deleteImage, ensureStaticSlide2Url } from "@/lib/cloudinary";
-import {
-  checkLimit,
-  createCarouselItem,
-  createCarouselContainer,
-  waitForContainer,
-  publishMedia,
-  getPermalink,
-  InstagramError,
-} from "@/lib/instagram";
-import { validateMenfessText } from "@/lib/validate";
-import { generateTicketCode, isPostTheme, type PostTheme } from "@/lib/post-template";
-import { buildMenfessCaption } from "@/lib/caption";
+import { validateMenfessText, normalizeMenfessText } from "@/lib/validate";
+import { checkLimit, InstagramError } from "@/lib/instagram";
+import { isPostTheme, type PostTheme, generateTicketCode } from "@/lib/post-template";
 import { enqueueMenfess } from "@/lib/queue";
-import type { SubmitRequestBody, SubmitErrorCode, SubmitResponse } from "@/types/menfess";
+import { publishMenfessCarousel } from "@/lib/publish-carousel";
+import type {
+  SubmitRequestBody,
+  SubmitResponse,
+  SubmitErrorCode,
+} from "@/types/menfess";
 
-// Pipeline butuh Node runtime (Satori + sharp + SDK Cloudinary).
 export const runtime = "nodejs";
-// Render gambar + rantai request ke 3 layanan bisa makan waktu.
-export const maxDuration = 60;
 
 function fail(
   code: SubmitErrorCode,
   message: string,
-  status: number,
+  status = 400,
   retryAfter?: number
 ) {
   return NextResponse.json<SubmitResponse>(
     { ok: false, code, message, ...(retryAfter ? { retryAfter } : {}) },
-    { status, headers: retryAfter ? { "Retry-After": String(retryAfter) } : undefined }
+    {
+      status,
+      headers: retryAfter ? { "Retry-After": String(retryAfter) } : undefined,
+    }
   );
 }
 
@@ -67,23 +50,71 @@ export async function POST(request: Request) {
 
   // ---- 1. Honeypot: kalau terisi, ini bot — buang diam-diam ----
   if (typeof body.website === "string" && body.website.trim() !== "") {
-    // Respons sukses palsu supaya bot tidak belajar membedakan.
     return NextResponse.json<SubmitResponse>({ ok: true });
   }
 
-  // ---- 2. Normalisasi & Validasi isi (Zero-width, kontrol ASCII, panjang teks) ----
-  const validation = validateMenfessText(body.content);
-  if (!validation.ok) {
-    return fail("VALIDATION_ERROR", validation.message, 400);
-  }
-  const content = validation.text;
+  // ---- 2. Deteksi Mode: Media vs Teks Murni & Validasi ----
+  const hasMedia = Array.isArray(body.mediaItems) && body.mediaItems.length > 0;
+  let content = "";
+  let coverTitle: string | undefined = undefined;
 
-  // Kategori opsional — tidak dikenal / kosong → diam-diam pakai default
+  if (hasMedia) {
+    if (body.mediaItems!.length > 6) {
+      return fail(
+        "VALIDATION_ERROR",
+        "Maksimal 6 foto/video dalam satu kiriman menfess.",
+        400
+      );
+    }
+
+    if (
+      !body.coverTitle ||
+      typeof body.coverTitle !== "string" ||
+      body.coverTitle.trim().length < 2
+    ) {
+      return fail(
+        "VALIDATION_ERROR",
+        "Judul cover wajib diisi minimal 2 karakter saat melampirkan foto/video.",
+        400
+      );
+    }
+
+    if (body.coverTitle.trim().length > 120) {
+      return fail(
+        "VALIDATION_ERROR",
+        "Judul cover terlalu panjang (maksimal 120 karakter).",
+        400
+      );
+    }
+
+    coverTitle = normalizeMenfessText(body.coverTitle);
+
+    if (body.content && typeof body.content === "string") {
+      const normalizedContent = normalizeMenfessText(body.content);
+      if (normalizedContent.length > 500) {
+        return fail(
+          "VALIDATION_ERROR",
+          "Isi cerita menfess maksimal 500 karakter.",
+          400
+        );
+      }
+      content = normalizedContent;
+    }
+  } else {
+    // Mode Teks Murni (Wajib ada isi menfess 2–500 karakter)
+    const validation = validateMenfessText(body.content);
+    if (!validation.ok) {
+      return fail("VALIDATION_ERROR", validation.message, 400);
+    }
+    content = validation.text;
+  }
+
+  // Kategori opsional
   const category = MENFESS_CATEGORY_IDS.includes(body.category ?? "")
     ? (body.category as string)
     : DEFAULT_CATEGORY;
 
-  // Tema kartu opsional — fallback ke "klasik"
+  // Tema kartu opsional
   const theme: PostTheme = isPostTheme(body.theme) ? body.theme : "klasik";
 
   // ---- 3. Rate limit per IP ----
@@ -93,9 +124,7 @@ export async function POST(request: Request) {
     const waitSec = rl.retryAfter ?? 300;
     const waitMin = Math.ceil(waitSec / 60);
     const waitText =
-      waitSec < 90
-        ? `${waitSec} detik lagi`
-        : `sekitar ${waitMin} menit lagi`;
+      waitSec < 90 ? `${waitSec} detik lagi` : `sekitar ${waitMin} menit lagi`;
     return fail(
       "RATE_LIMITED",
       `Hai, sepertinya kamu baru saja mengirim menfess. Tenang dulu sebentar — kamu bisa kirim lagi dalam ${waitText}. Tidak kemana-mana kok! 😊`,
@@ -123,215 +152,96 @@ export async function POST(request: Request) {
         403
       );
     }
-  } else {
-    console.log("[submit] Turnstile nonaktif (kunci kosong/placeholder) — verifikasi captcha dilewati.");
   }
 
-  // ---- 5. Cek kuota Instagram (fail-open: kalau API-nya gagal, izinkan) ----
+  // ---- 5. Cek kuota Instagram & Enqueue Otomatis ----
+  const ticketCode = generateTicketCode();
+  let isQuotaFull = false;
+
   try {
     const quota = await checkLimit();
     if (quota.remaining <= IG_QUOTA_BUFFER) {
-      const ticketCode = generateTicketCode();
-      try {
-        const queueResult = await enqueueMenfess({
-          ticketCode,
-          content,
-          category,
-          theme,
-        });
-
-        console.log(
-          `[submit] Kuota habis (${quota.used}/${quota.total}). Menfess NO.${ticketCode} dimasukkan ke antrean #${queueResult.queuePosition}`
-        );
-
-        return NextResponse.json<SubmitResponse>({
-          ok: true,
-          queued: true,
-          ticketCode,
-          theme,
-          queuePosition: queueResult.queuePosition,
-          message: `Kuota posting otomatis Instagram untuk 24 jam terakhir sudah penuh (${quota.used}/${quota.total}). Menfess kamu aman di antrean ke-${queueResult.queuePosition} (NO. ${ticketCode}) dan otomatis diposting saat kuota tersedia.`,
-        });
-      } catch (queueErr) {
-        console.error("[submit] gagal enqueue menfess ke database:", queueErr);
-        return fail(
-          "INTERNAL_ERROR",
-          "Gagal memasukkan menfess ke dalam antrean. Silakan coba kirim kembali beberapa saat lagi.",
-          500
-        );
-      }
+      isQuotaFull = true;
     }
-  } catch (err) {
-    // Jangan blokir user hanya karena pengecekan kuota gagal.
+  } catch (quotaErr) {
     console.warn(
-      "[submit] cek kuota gagal, lanjut tanpa cek:",
-      err instanceof Error ? err.message : err
+      "[submit] Gagal cek kuota IG (fail-open diaktifkan):",
+      quotaErr instanceof Error ? quotaErr.message : quotaErr
     );
   }
 
-  // ---- 6. Generate kode tiket unik & render gambar kartu 1080x1080 ----
-  const ticketCode = generateTicketCode();
-  let png: Buffer;
+  if (isQuotaFull) {
+    try {
+      const queueResult = await enqueueMenfess({
+        ticketCode,
+        content,
+        category,
+        theme,
+        coverTitle,
+        coverStyle: body.coverStyle ?? "brutalist",
+        aspectRatio: body.aspectRatio ?? "4:5",
+        coverImage: body.coverImage,
+        mediaItems: body.mediaItems,
+      });
+
+      console.log(
+        `[submit] Kuota habis. Menfess NO.${ticketCode} masuk antrean #${queueResult.queuePosition}`
+      );
+
+      return NextResponse.json<SubmitResponse>({
+        ok: true,
+        queued: true,
+        ticketCode,
+        theme,
+        queuePosition: queueResult.queuePosition,
+        message: `Kuota posting otomatis Instagram untuk 24 jam terakhir sudah penuh. Menfess kamu aman di antrean ke-${queueResult.queuePosition} (NO. ${ticketCode}) dan otomatis diposting saat kuota tersedia.`,
+      });
+    } catch (queueErr) {
+      console.error("[submit] gagal enqueue menfess ke database:", queueErr);
+      return fail(
+        "INTERNAL_ERROR",
+        "Gagal memasukkan menfess ke dalam antrean. Silakan coba kirim kembali beberapa saat lagi.",
+        500
+      );
+    }
+  }
+
+  // ---- 6. Terbitkan Menfess Langsung ke Instagram Carousel ----
   try {
-    png = await renderMenfessCard(content, { categoryId: category, ticketCode, theme });
-  } catch (err) {
-    console.error("[submit] gagal generate gambar:", err);
-    return fail(
-      "IMAGE_FAILED",
-      "Gagal menyiapkan gambar kartu menfess di server. Coba kirim ulang — kalau masih gagal, coba kurangi karakter spesial yang aneh-aneh.",
-      500
-    );
-  }
+    const result = await publishMenfessCarousel({
+      ticketCode,
+      category,
+      theme,
+      content,
+      coverTitle,
+      coverStyle: body.coverStyle ?? "brutalist",
+      aspectRatio: body.aspectRatio ?? "4:5",
+      coverImage: body.coverImage,
+      mediaItems: body.mediaItems,
+      dryRun: isDryRun(),
+    });
 
-  // ---- 7. Mode dry-run: berhenti sebelum menyentuh layanan eksternal ----
-  if (isDryRun()) {
     console.log(
-      `[submit] DRY RUN — tiket NO.${ticketCode} (${theme}) tergenerasi, upload & posting dilewati.`
+      `[submit] OK ip=${ip} ticket=NO.${ticketCode} theme=${theme} mediaCount=${
+        body.mediaItems?.length ?? 0
+      } mediaId=${result.mediaId}`
     );
+
     return NextResponse.json<SubmitResponse>({
       ok: true,
-      dryRun: true,
+      permalink: result.permalink,
       ticketCode,
       theme,
     });
-  }
-
-  // ---- 8. Upload sementara ke Cloudinary ----
-  let publicId = "";
-  let imageUrl = "";
-  try {
-    const uploaded = await uploadImage(png);
-    publicId = uploaded.publicId;
-    imageUrl = uploaded.url;
-  } catch (err) {
-    console.error("[submit] gagal upload Cloudinary:", err);
-    return fail(
-      "UPLOAD_FAILED",
-      "Gagal menaruh gambar di penyimpanan sementara. Ini masalah server, bukan kamu — coba beberapa saat lagi.",
-      502
-    );
-  }
-
-  // Caption Instagram dengan nomor tiket:
-  // "— terkirim anonim via [URL site] · NO.[KODE]"
-  const caption = buildMenfessCaption(content, {
-    category,
-    ticketCode,
-    siteUrl: SITE_URL,
-  });
-
-  // ---- 9. Buat media container IG Carousel (Slide 1 + Slide 2) ----
-  let carouselCreationId: string;
-  try {
-    const slide2Url = await ensureStaticSlide2Url();
-
-    // Buat container item untuk slide 1 (menfess) dan slide 2 (QR CTA) secara paralel
-    const [slide1ChildId, slide2ChildId] = await Promise.all([
-      createCarouselItem(imageUrl),
-      createCarouselItem(slide2Url),
-    ]);
-
-    // Tunggu Meta selesai memproses kedua slide item (status_code: FINISHED)
-    await Promise.all([
-      waitForContainer(slide1ChildId),
-      waitForContainer(slide2ChildId),
-    ]);
-
-    // Satukan ke parent Carousel container dengan caption
-    carouselCreationId = await createCarouselContainer(
-      [slide1ChildId, slide2ChildId],
-      caption
-    );
-
-    // Tunggu parent Carousel container berstatus FINISHED sebelum dipublish
-    await waitForContainer(carouselCreationId);
   } catch (err) {
     const ig = err instanceof InstagramError ? err : null;
-
-    // Error 9004: Meta CDN gagal mengunduh gambar dari Cloudinary, coba SEKALI lagi
-    // dengan re-upload buffer ke URL segar sebelum menyerah.
-    if (ig?.isMediaFetchFailure && publicId) {
-      console.warn(
-        `[submit] Carousel gagal (Meta fetch media code ${ig.fbCode ?? 9004}) tiket NO.${ticketCode}, mencoba re-upload segar & retry:`
-      );
-      const stalePublicId = publicId;
-      try {
-        const reuploaded = await uploadImage(png);
-        publicId = reuploaded.publicId;
-        imageUrl = reuploaded.url;
-        // Bersihkan gambar lama di latar belakang
-        deleteImage(stalePublicId).catch(() => {});
-
-        const slide2Url = await ensureStaticSlide2Url();
-        const [slide1ChildId, slide2ChildId] = await Promise.all([
-          createCarouselItem(imageUrl),
-          createCarouselItem(slide2Url),
-        ]);
-
-        await Promise.all([
-          waitForContainer(slide1ChildId),
-          waitForContainer(slide2ChildId),
-        ]);
-
-        carouselCreationId = await createCarouselContainer(
-          [slide1ChildId, slide2ChildId],
-          caption
-        );
-
-        await waitForContainer(carouselCreationId);
-      } catch (retryErr) {
-        await deleteImage(publicId).catch(() => {});
-        const retryIg = retryErr instanceof InstagramError ? retryErr : ig;
-        console.error("[submit] retry carousel container gagal:", retryIg?.message, retryIg?.fbCode);
-        return fail(
-          "IG_MEDIA_FAILED",
-          `Instagram menolak kartu carousel saat persiapan posting: ${
-            retryIg?.message ?? "gagal memproses media"
-          }. Coba lagi beberapa menit; kalau terus terjadi, kuota/token IG perlu dicek.`,
-          502
-        );
-      }
-    } else {
-      await deleteImage(publicId).catch(() => {});
-      console.error("[submit] gagal buat carousel container:", ig?.message, ig?.fbCode);
-      return fail(
-        "IG_MEDIA_FAILED",
-        `Instagram menolak kartu carousel saat persiapan posting: ${
-          ig?.message ?? "gagal memproses media"
-        }. Coba lagi beberapa menit; kalau terus terjadi, kuota/token IG perlu dicek.`,
-        502
-      );
-    }
-  }
-
-  // ---- 10. Publish Carousel ----
-  let mediaId: string;
-  try {
-    mediaId = await publishMedia(carouselCreationId);
-  } catch (err) {
-    await deleteImage(publicId).catch(() => {});
-    const ig = err instanceof InstagramError ? err : null;
-    console.error("[submit] gagal publish carousel:", ig?.message, ig?.fbCode);
+    console.error("[submit] Gagal publikasi menfess:", ig?.message, ig?.fbCode);
     return fail(
       "IG_PUBLISH_FAILED",
-      `Kartu carousel sudah jadi tapi Instagram gagal menerbitkannya: ${
-        ig?.message ?? "penolakan dari Instagram API"
-      }. Gambar sementara sudah dibersihkan; menfess kamu belum tayang, silakan coba lagi.`,
+      `Instagram menolak kartu carousel saat persiapan posting: ${
+        ig?.message ?? "gagal memproses media"
+      }. Coba lagi beberapa menit; jika terus terjadi, sistem akan mengarahkan ke antrean.`,
       502
     );
   }
-
-  // ---- 11. Permalink (best effort) + bersih-bersih ----
-  const permalink = await getPermalink(mediaId);
-  await deleteImage(publicId).catch(() => {});
-
-  console.log(
-    `[submit] OK ip=${ip} ticket=NO.${ticketCode} theme=${theme} chars=${content.length} category=${category} media=${mediaId}`
-  );
-  return NextResponse.json<SubmitResponse>({
-    ok: true,
-    permalink,
-    ticketCode,
-    theme,
-  });
 }
